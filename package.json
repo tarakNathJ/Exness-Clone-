@@ -1,5 +1,5 @@
 {
-  "name": "my-turborepo",
+  "name": "Exness-Next-Time",
   "private": true,
   "scripts": {
     "build": "turbo run build",
