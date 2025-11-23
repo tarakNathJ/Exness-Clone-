@@ -61,5 +61,6 @@ export const tread_history = pgTable("tread_history", {
   // Trade IDs
   F: bigint("F",{mode:"bigint"}).notNull(),                         // first trade ID
   L: bigint("L",{mode:"bigint"}).notNull(),                         // last trade ID
-  n: bigint("n",{mode:"bigint"}).notNull(),                         // total number of trades
+  n: bigint("n",{mode:"bigint"}).notNull(),   
+  createdAt: timestamp("created_at")                      // total number of trades
 });

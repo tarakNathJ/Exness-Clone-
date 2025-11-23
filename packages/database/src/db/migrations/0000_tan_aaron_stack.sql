@@ -42,7 +42,8 @@ CREATE TABLE "tread_history" (
 	"C" bigint NOT NULL,
 	"F" bigint NOT NULL,
 	"L" bigint NOT NULL,
-	"n" bigint NOT NULL
+	"n" bigint NOT NULL,
+	created_at TIMESTAMPTZ GENERATED ALWAYS AS (TO_TIMESTAMP(E/1000)) STORED
 );
 --> statement-breakpoint
 CREATE TABLE "user" (
@@ -55,3 +56,56 @@ CREATE TABLE "user" (
 --> statement-breakpoint
 ALTER TABLE "account_balance" ADD CONSTRAINT "account_balance_user_id_user_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."user"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "tread" ADD CONSTRAINT "tread_user_id_user_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."user"("id") ON DELETE no action ON UPDATE no action;
+
+
+
+SELECT create_hypertable("tread_history" ,"created_at");
+
+CREATE INDEX idx_tread_history_symbol_time on public.tread_history(s , created_at DESC);
+CREATE MATERIALIZED VIEW mv_tread_1min
+WITH (timescaledb.continuous) as 
+SELECT 
+	s AS symbol,
+	time_bucket("1 minute" , created_at) AS bucket,
+	AVG(p) AS avg_price,
+    SUM(v) AS total_volume,
+    COUNT(*) AS trades_count
+
+FROM public.tread_history
+GROUP BY symbol , bucket
+WITH NO DATA;
+
+REFRESH MATERIALIZED VIEW mv_tread_1min;
+
+CREATE MATERIALIZED VIEW mv_tread_5min
+WITH (timescaledb.continuous) as 
+SELECT 
+	s AS symbol,
+	time_bucket("5 minute" , created_at) AS bucket,
+	AVG(p) AS avg_price,
+    SUM(v) AS total_volume,
+    COUNT(*) AS trades_count
+
+FROM public.tread_history
+GROUP BY symbol , bucket
+WITH NO DATA;
+
+
+REFRESH MATERIALIZED VIEW mv_tread_5min;
+
+CREATE MATERIALIZED VIEW mv_tread_30min
+WITH (timescaledb.continuous) as 
+SELECT 
+	s AS symbol,
+	time_bucket("30 minute" , created_at) AS bucket,
+	AVG(p) AS avg_price,
+    SUM(v) AS total_volume,
+    COUNT(*) AS trades_count
+
+FROM public.tread_history
+GROUP BY symbol , bucket
+WITH NO DATA;
+
+
+REFRESH MATERIALIZED VIEW mv_tread_30min;
+
