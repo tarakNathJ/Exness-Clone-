@@ -17,6 +17,7 @@ class web_socket_server {
   private count: number = 0;
   private consumer: Consumer | undefined;
 
+  // init websocket server 
   constructor(port: number) {
     const server = this.app.listen(port, () => {
       console.log(`server start at ${port}`);
@@ -25,6 +26,7 @@ class web_socket_server {
     this.init_consumer();
   }
 
+  // kafka consumer consume binance data and  send all data
   private async init_consumer() {
     try {
       const get_consumer = await this.init_kafka(process.env.KAFKA_GROUP_ID!);
@@ -32,7 +34,7 @@ class web_socket_server {
         eachMessage: async ({ topic, partition, message }) => {
           const data = JSON.parse(message.value!.toString());
           if (!data) return;
-          console.log(data);
+          
 
           this.clients.forEach((client) => {
             client.socket.send(JSON.stringify(data));
@@ -68,6 +70,8 @@ class web_socket_server {
     }
   }
 
+
+  // ws connection 
   public start() {
     this.WSS.on("connection", (ws) => {
       this.count = this.count + 1;
