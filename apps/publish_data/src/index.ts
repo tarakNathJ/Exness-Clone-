@@ -1,9 +1,9 @@
 import WebSocket, { WebSocketServer } from "ws";
 import express from "express";
 import { Kafka, type Consumer } from "kafkajs";
-import {config} from "dotenv";
+import { config } from "dotenv";
 
-config()
+config();
 
 interface client {
   socket: WebSocket;
@@ -25,53 +25,99 @@ class web_socket_server {
     this.init_consumer();
   }
 
-  private async init_consumer(){
-    const get_consumer=  await this.init_kafka("test");
-    get_consumer.run({
-      eachMessage: async ({ topic, partition, message }) => {
-        console.log({
-          value: message.value?.toString(),
-        });
-      }
-    })
+  private async init_consumer() {
+    try {
+      const get_consumer = await this.init_kafka(process.env.KAFKA_GROUP_ID!);
+      get_consumer.run({
+        eachMessage: async ({ topic, partition, message }) => {
+          const data = JSON.parse(message.value!.toString());
+          if (!data) return;
+          console.log(data);
+
+          this.clients.forEach((client) => {
+            client.socket.send(JSON.stringify(data));
+          });
+        },
+      });
+    } catch (error: any) {
+      console.error("Error initializing consumer:", error.message);
+      throw Error(error.message);
+    }
   }
 
   //   init kafka
   private async init_kafka(group_id: string) {
-    if (this.consumer) return this.consumer;
+    try {
+      if (this.consumer) return this.consumer;
 
-    const kafka_init = new Kafka({
-      clientId: process.env.KAFKA_CLIENT_ID!,
-      brokers: [process.env.KAFKA_BROKER!],
-    });
-    this.consumer  =  kafka_init.consumer({groupId:group_id})
-    await this.consumer.connect()
-    await this.consumer.subscribe({topic:process.env.KAFKA_TOPIC ! ,fromBeginning: true})
+      const kafka_init = new Kafka({
+        clientId: process.env.KAFKA_CLIENT_ID!,
+        brokers: [process.env.KAFKA_BROKER!],
+      });
+      this.consumer = kafka_init.consumer({ groupId: group_id });
+      await this.consumer.connect();
+      await this.consumer.subscribe({
+        topic: process.env.KAFKA_TOPIC!,
+        fromBeginning: true,
+      });
 
-    return this.consumer;
+      return this.consumer;
+    } catch (error: any) {
+      console.error("Error initializing Kafka:", error.message);
+      throw error;
+    }
   }
 
   public start() {
     this.WSS.on("connection", (ws) => {
       this.count = this.count + 1;
       ws.on("message", (data) => {
-        const message = JSON.parse(data.toString());
-        switch (message.type) {
-          case "join":
-            this.clients.set(this.count, {
-              id: this.count,
-              socket: ws,
-            });
-            console.log("user join", this.count);
-            break;
-          case "message":
-            this.clients.forEach((client) => {
-              console.log(message);
-              client.socket.send(JSON.stringify(message));
-            });
-            break;
-          default:
-            break;
+        // chack message are exist or  not
+        let message;
+        try {
+          message = JSON.parse(data.toString());
+        } catch (error) {
+          console.error("Error parsing message:", error);
+          ws.send(
+            JSON.stringify({
+              type: "error",
+              error: "Invalid message format",
+            })
+          );
+        }
+
+        // chack message type
+        if (!message.type) {
+          ws.send(
+            JSON.stringify({
+              type: "error",
+              error: "Invalid message format: type property missing",
+            })
+          );
+          return;
+        }
+
+        try {
+          switch (message.type) {
+            case "join":
+              this.clients.set(this.count, {
+                id: this.count,
+                socket: ws,
+              });
+              console.log("user join", this.count);
+              break;
+
+            default:
+              break;
+          }
+        } catch (error) {
+          console.error("Error handling request:", error);
+          ws.send(
+            JSON.stringify({
+              type: "error",
+              error: "Internal server error",
+            })
+          );
         }
       });
       ws.on("close", () => {
@@ -87,4 +133,6 @@ class web_socket_server {
   }
 }
 
-new web_socket_server(4500).start();
+const port =process.env.PORT
+if(!port) throw new Error("port not found")
+new web_socket_server(parseInt(port)).start();
