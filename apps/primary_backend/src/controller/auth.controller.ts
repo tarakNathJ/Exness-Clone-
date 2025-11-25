@@ -6,7 +6,7 @@ import type { Request, Response } from "express";
 import bcrypt from "bcrypt";
 import JWT from "jsonwebtoken";
 
-
+// signup controller
 export const register_user = async_handler(async (req, res) => {
   const { name, email, password } = req.body;
 
@@ -29,7 +29,7 @@ export const register_user = async_handler(async (req, res) => {
     throw new api_error(400, "user already exist try anather email");
   }
   const salt = await bcrypt.genSalt(10);
-  const hashed_password =  bcrypt.hashSync(password, salt);
+  const hashed_password = bcrypt.hashSync(password, salt);
   if (!hashed_password) throw new api_error(400, "generate solt failed");
 
   const [add_new_user] = await db
@@ -51,12 +51,14 @@ export const register_user = async_handler(async (req, res) => {
   );
 });
 
+
+// login controller
 export const login_user = async_handler(async (req, res) => {
   const { email, password } = req.body;
 
-//   chack hole fields
-//find user data 
-// chack password are write or wrong
+  //   chack hole fields
+  //find user data
+  // chack password are write or wrong
   if (
     [email, password].some(
       (item) => item.trim() === undefined || item.trim() === ""
@@ -66,21 +68,53 @@ export const login_user = async_handler(async (req, res) => {
   }
 
   const [user_data] = await db.select().from(user).where(eq(user.email, email));
-  
+
   if (!user_data) {
     throw new api_error(400, "user not found");
   }
 
-   const is_password_match = bcrypt.compareSync(password, user_data.password);
+  const is_password_match = bcrypt.compareSync(password, user_data.password);
 
-   if (!is_password_match) {
+  if (!is_password_match) {
     throw new api_error(400, "password not match");
-   }
+  }
 
-   const token = JWT.sign({id: user_data.id}, process.env.JWT_SECRET as string, {expiresIn: "1d"});
-   if(!token) throw new api_error(400, "token not generated")
+  const token = JWT.sign(
+    { id: user_data.id },
+    process.env.JWT_SECRET as string,
+    { expiresIn: "1d" }
+  );
+  if (!token) throw new api_error(400, "token not generated");
 
-   return new api_responce(200, "login successfully", {token , email:user_data.email, name: user_data.name}).send(res)
-   
+  return new api_responce(200, "login successfully", {
+    token,
+    email: user_data.email,
+    name: user_data.name,
+  }).send(res);
+});
 
+// fogget password
+export const forgot_password = async_handler(async (req, res) => {
+  const { new_password, email } = req.body;
+
+  if (
+    [email, new_password].some(
+      (item) => item.trim() === undefined || item.trim() === ""
+    )
+  ) {
+    throw new api_error(400, "please fill all the fields");
+  }
+
+  const [fing_user] = await db.select().from(user).where(eq(user.email, email));
+  if (!fing_user) throw new api_error(400, "user not found");
+
+  const salt = await bcrypt.genSalt(10);
+  const hashed_password = bcrypt.hashSync(new_password, salt);
+  if (!hashed_password) throw new api_error(400, "generate solt failed");
+
+  const [update_password] = await db.update(user).set({password: hashed_password}).where(eq(user.email, email)).returning();
+
+  if (!update_password) throw new api_error(400, "update password failed");
+
+  return new api_responce(200, "password updated successfully").send(res);
 });

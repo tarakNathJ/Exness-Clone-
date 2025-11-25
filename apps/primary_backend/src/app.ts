@@ -14,10 +14,11 @@ class init_express_server {
         this.app.use(bodyParser.urlencoded({extended: true}));
         this.app.use("/api",route)
     }
-    public start_server(PORT:number){
-        this.app.listen(PORT, () => {
+    public start_server(PORT:number) : any{
+        const server =  this.app.listen(PORT, () => {
             console.log(`Server is running on port ${PORT}`)
         })
+        return server
     }
 }
 export default init_express_server;
