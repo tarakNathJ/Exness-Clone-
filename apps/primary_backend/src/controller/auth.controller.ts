@@ -195,3 +195,20 @@ export const add_balance = async_handler(async (req, res) => {
 });
 
 // purchase new simple tread
+export const purchase_new_simple_trade = async_handler(async (req, res) => {
+  const { sell_symbol,buy_symbol, quantity } = req.body;
+  // @ts-ignore
+  const user_id = req.user.id;
+
+  if (!buy_symbol ||!sell_symbol || !user_id || !quantity) {
+    throw new api_error(400, "please fill all the fields");
+  }
+
+  const [user_are_exist] = await db.select().from(user).where(eq(user.id, user_id));
+  if(user_are_exist === undefined || user_are_exist === null || !user_are_exist) {
+    throw new api_error(400, "user not found");
+  }
+
+  // const {seller_balance , buyer_balance} 
+});
+

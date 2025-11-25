@@ -39,6 +39,14 @@ class web_socket_server {
           this.clients.forEach((client) => {
             client.socket.send(JSON.stringify(data));
           });
+
+          get_consumer.commitOffsets([
+            {
+              topic,
+              partition,
+              offset:(Number(message.offset) + 1).toString() ,
+            },
+          ]);
         },
       });
     } catch (error: any) {
