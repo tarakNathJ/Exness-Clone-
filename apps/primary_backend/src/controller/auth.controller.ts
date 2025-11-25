@@ -1,10 +1,11 @@
 import api_responce from "../utils/api_responce.js";
 import { api_error } from "../utils/api_error.js";
 import { async_handler } from "../utils/async_handler.js";
-import { user, db, eq } from "@database/main/dist/index.js";
+import { user, db, eq, account_balance } from "@database/main/dist/index.js";
 import type { Request, Response } from "express";
 import bcrypt from "bcrypt";
 import JWT from "jsonwebtoken";
+import { and } from "drizzle-orm";
 
 // signup controller
 export const register_user = async_handler(async (req, res) => {
@@ -40,7 +41,10 @@ export const register_user = async_handler(async (req, res) => {
       password: hashed_password,
       is_active: true,
     })
-    .returning();
+    .returning({
+      name: user.name,
+      email: user.email,
+    });
 
   if (!add_new_user) {
     throw new api_error(400, "database insert failed");
@@ -50,7 +54,6 @@ export const register_user = async_handler(async (req, res) => {
     res
   );
 });
-
 
 // login controller
 export const login_user = async_handler(async (req, res) => {
@@ -112,9 +115,83 @@ export const forgot_password = async_handler(async (req, res) => {
   const hashed_password = bcrypt.hashSync(new_password, salt);
   if (!hashed_password) throw new api_error(400, "generate solt failed");
 
-  const [update_password] = await db.update(user).set({password: hashed_password}).where(eq(user.email, email)).returning();
+  const [update_password] = await db
+    .update(user)
+    .set({ password: hashed_password })
+    .where(eq(user.email, email))
+    .returning();
 
   if (!update_password) throw new api_error(400, "update password failed");
 
   return new api_responce(200, "password updated successfully").send(res);
 });
+
+// add user balance
+
+export const add_balance = async_handler(async (req, res) => {
+  // chack .  all data are exist or not
+  // find user  : db and chack
+  // chack this symbol data are exist or not
+  // chack if exist then update || if not exist then create
+  // return responce
+
+  const { symbol, balance } = req.body;
+  // @ts-ignore
+  const user_id = req.user.id;
+  if (!symbol || !user_id || !balance) {
+    throw new api_error(400, "please fill all the fields");
+  }
+
+  const [user_are_exist] = await db
+    .select()
+    .from(user)
+    .where(eq(user.id, user_id));
+
+  if (
+    !user_are_exist ||
+    user_are_exist === undefined ||
+    user_are_exist === null
+  ) {
+    throw new api_error(400, "user not found");
+  }
+
+  const [chack_balance_for_this_simbol_balance_exist] = await db
+    .select()
+    .from(account_balance)
+    .where(
+      and(
+        eq(account_balance.symbol, symbol),
+        eq(account_balance.user_id, user_id)
+      )
+    );
+  if (!chack_balance_for_this_simbol_balance_exist) {
+    throw new api_error(400, "balance not found");
+  }
+  const [add_new_balance] = await db
+    .insert(account_balance)
+    .values({
+      balance: balance,
+      symbol: symbol,
+      user_id: user_id,
+    })
+    .onConflictDoUpdate({
+      target: [account_balance.symbol, account_balance.user_id],
+      set: {
+        balance: balance + chack_balance_for_this_simbol_balance_exist.balance,
+      },
+    })
+    .returning({
+      balance: account_balance.balance,
+      symbol: account_balance.symbol,
+    });
+
+  if (!add_new_balance) throw new api_error(400, "db insert failed");
+
+  return new api_responce(
+    200,
+    "balance added successfully",
+    add_new_balance
+  ).send(res);
+});
+
+// purchase new simple tread

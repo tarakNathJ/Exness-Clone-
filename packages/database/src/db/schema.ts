@@ -1,5 +1,5 @@
 
-import { boolean,integer ,doublePrecision, pgTable , varchar, pgEnum, timestamp ,bigint } from "drizzle-orm/pg-core";
+import { boolean,integer ,doublePrecision, pgTable , varchar, pgEnum, timestamp ,bigint, unique } from "drizzle-orm/pg-core";
 export const tread_type = pgEnum("tread_type",["long","short"])
 
 export const user =  pgTable("user",{
@@ -27,6 +27,10 @@ export const account_balance = pgTable("account_balance",{
     balance :doublePrecision("balance").notNull(),
     symbol :varchar("symbol",{length:50}).notNull(),
     user_id :integer("user_id").references(()=>user.id)
+},(table) => {
+    return {
+        symbolUserUnique: unique().on(table.symbol, table.user_id)
+    };
 })
 export const tread_history = pgTable("tread_history", {
   id: integer().primaryKey().generatedAlwaysAsIdentity(),
