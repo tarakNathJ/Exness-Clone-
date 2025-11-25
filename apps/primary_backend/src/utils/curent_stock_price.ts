@@ -1,5 +1,6 @@
 import { Kafka, type Consumer } from "kafkajs";
 import { config } from "dotenv";
+import {set_curent_price }from "../controller/auth.controller.js"
 config();
 
 class take_current_tread_price {
@@ -10,26 +11,7 @@ class take_current_tread_price {
   constructor() {
     this.init_consumer();
   }
-  
-  public get_price_data_for_symbol(symbol: string , quantity: number) {
-    return quantity * this.price_data[symbol].price ;
-  }
 
-  // update user price
-  private update_price_data(message: any) {
-    const symbol = message.s;
-    const price = parseFloat(message.c);
-    if (isNaN(price)) return;
-    if (this.price_data[symbol]) {
-      this.price_data[symbol].price = price;
-      this.price_data[symbol].timestamp = Date.now();
-    } else {
-      this.price_data[symbol] = {
-        price: price,
-        timestamp: Date.now(),
-      };
-    }
-  }
   // kafka consumer consume binance data and  send all data
   private async init_consumer() {
     try {
@@ -38,7 +20,9 @@ class take_current_tread_price {
         eachMessage: async ({ topic, partition, message }) => {
           const data = JSON.parse(message.value!.toString());
           if (!data) return;
-          this.update_price_data(data);
+          ////////////////////////////update price //////////////////
+          set_curent_price(data.data.s,parseFloat(data.data.c))    
+          ///////////////////////////////end/////////////////////////
           get_consumer.commitOffsets([
             {
               topic,

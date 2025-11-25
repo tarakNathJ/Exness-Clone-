@@ -1,11 +1,60 @@
 import api_responce from "../utils/api_responce.js";
 import { api_error } from "../utils/api_error.js";
 import { async_handler } from "../utils/async_handler.js";
-import { user, db, eq, account_balance } from "@database/main/dist/index.js";
+import {
+  user,
+  db,
+  eq,
+  account_balance,
+  tread,
+} from "@database/main/dist/index.js";
 import type { Request, Response } from "express";
 import bcrypt from "bcrypt";
 import JWT from "jsonwebtoken";
 import { and } from "drizzle-orm";
+// import { take_current_tread_price } from "../utils/curent_stock_price.js";
+
+const curent_price: any = {};
+
+// set curent price
+export const set_curent_price = (symbol: string, price: number) => {
+  try {
+    if (curent_price[symbol]) {
+      curent_price[symbol].price = price;
+      curent_price[symbol].timestamp = Date.now();
+      return true;
+    } else {
+      curent_price[symbol] = {
+        price: price,
+        timestamp: Date.now(),
+      };
+      return true;
+    }
+  } catch (error) {
+    return false;
+  }
+};
+
+// get curent price
+function get_price_data_for_symbol(
+  symbol: string,
+  quantity: number,
+  existing_balance: number
+) {
+  if (!curent_price[symbol]) {
+    throw new Error(`Symbol ${symbol} not found`);
+  }
+
+  const price = quantity * curent_price[symbol].price;
+  if (price > existing_balance) {
+    return {
+      price: price,
+      status: false,
+    };
+  }
+
+  return { price: price, status: true };
+}
 
 // signup controller
 export const register_user = async_handler(async (req, res) => {
@@ -196,19 +245,96 @@ export const add_balance = async_handler(async (req, res) => {
 
 // purchase new simple tread
 export const purchase_new_simple_trade = async_handler(async (req, res) => {
-  const { sell_symbol,buy_symbol, quantity } = req.body;
+  const { symbol, quantity } = req.body;
   // @ts-ignore
   const user_id = req.user.id;
 
-  if (!buy_symbol ||!sell_symbol || !user_id || !quantity) {
+
+  // chack all data and 
+  // chack user are exist or not
+  // chack user balance are exist or not
+  // get curent price and status -> and  base on  status ,take  decision
+  // then take new tread and update balance 
+  // return responce
+
+  if (!symbol || !user_id || !quantity) {
     throw new api_error(400, "please fill all the fields");
   }
 
-  const [user_are_exist] = await db.select().from(user).where(eq(user.id, user_id));
-  if(user_are_exist === undefined || user_are_exist === null || !user_are_exist) {
+  const [user_are_exist] = await db
+    .select()
+    .from(user)
+    .where(eq(user.id, user_id));
+  if (
+    user_are_exist === undefined ||
+    user_are_exist === null ||
+    !user_are_exist
+  ) {
     throw new api_error(400, "user not found");
   }
 
-  // const {seller_balance , buyer_balance} 
+  const [chack_balance_for_this_simbol_balance_exist] = await db
+    .select()
+    .from(account_balance)
+    .where(
+      and(
+        eq(account_balance.symbol, "USD"),
+        eq(account_balance.user_id, user_id)
+      )
+    );
+
+  if (!chack_balance_for_this_simbol_balance_exist) {
+    throw new api_error(400, "balance not found");
+  }
+
+  const { price, status } = get_price_data_for_symbol(
+    symbol,
+    quantity,
+    chack_balance_for_this_simbol_balance_exist.balance
+  );
+
+  if (!status) {
+    throw new api_error(400, "insufficient balance");
+  }
+
+  const result = await db.transaction(async (tx) => {
+    const [add_new_trade] = await tx
+      .insert(tread)
+      .values({
+        price: price,
+        quantity: quantity,
+        symbol: symbol,
+        user_id: user_id,
+        tread_type: "long",
+      })
+      .returning({
+        id: tread.id,
+        price: tread.price,
+        quantity: tread.quantity,
+        symbol: tread.symbol,
+      });
+    const [update_user_balance] = await tx
+      .update(account_balance)
+      .set({
+        balance: chack_balance_for_this_simbol_balance_exist.balance - price,
+      })
+      .where(
+        and(
+          eq(account_balance.symbol, "USD"),
+          eq(account_balance.user_id, user_id)
+        )
+      )
+      .returning({
+        balance: account_balance.balance,
+        symbol: account_balance.symbol,
+      });
+    return { add_new_trade, update_user_balance };
+  });
+  if (!result) throw new api_error(400, "database insert failed");
+  return new api_responce(200, "purchase new simple trade", result).send(
+    res
+  );
+
 });
+
 
