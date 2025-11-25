@@ -1,4 +1,6 @@
 import { WebSocketServer } from "ws";
+import { db, tread_history } from "@database/main/dist/index.js";
+
 
 class create_ws_server {
   private WSS: WebSocketServer;
@@ -8,8 +10,8 @@ class create_ws_server {
   }
   public start_server() {
     this.WSS.on("connection", (ws) => {
-      ws.on("message", (data) => {
-        ws.send( JSON.stringify(JSON.parse(data.toString())))
+      ws.on("message", async(data) => {        
+        ws.send(JSON.stringify(data));
       })
     });
   }
