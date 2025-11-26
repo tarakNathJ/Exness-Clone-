@@ -20,6 +20,10 @@ export const tread = pgTable("tread",{
     quantity :doublePrecision("quantity").notNull(),
     created_at :timestamp("created_at").defaultNow().notNull(),
     updated_at :timestamp("updated_at").defaultNow().notNull()
+},(table)=>{
+    return {
+        symbolUserUnique: unique().on(table.symbol, table.user_id ,table.tread_type)
+    }
 })
 
 export const account_balance = pgTable("account_balance",{

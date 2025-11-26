@@ -428,6 +428,7 @@ export const sell_existing_trade = async_handler(async (req, res) => {
 });
 
 
+// get user balance
 export const get_user_balance = async_handler(async (req, res) => {
   // @ts-ignore
   const user_id = req.user.id;
@@ -458,6 +459,7 @@ export const get_user_balance = async_handler(async (req, res) => {
 })
 
 
+// get user all tread
 export const get_user_all_tread = async_handler(async (req, res) => {
   // @ts-ignore
   const user_id = req.user.id;

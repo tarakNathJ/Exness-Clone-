@@ -1,0 +1,1 @@
+ALTER TABLE "tread" ADD CONSTRAINT "tread_symbol_user_id_tread_type_unique" UNIQUE("symbol","user_id","tread_type");
