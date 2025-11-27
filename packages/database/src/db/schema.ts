@@ -98,10 +98,19 @@ export const options_tread = pgTable("options_tread", {
   symbol: varchar("symbol", { length: 50 }).notNull(),
   user_id: integer("user_id").references(() => user.id),
   quantity: doublePrecision("quantity").notNull(),
+  tread_type :tread_type("tread_type").notNull(),
   open_price: doublePrecision("open_price").notNull(),
-  close_price: doublePrecision("close_price").notNull(),
+  close_price: doublePrecision("close_price"),
   take_profit: doublePrecision("take_profit").notNull(),
   stop_loss: doublePrecision("stop_loss").notNull(),
   created_at: timestamp("created_at").defaultNow().notNull(),
   updated_at: timestamp("updated_at").defaultNow().notNull(),
 });
+
+export const user_unique_id = pgTable("user_unique_id",{
+  id:integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  user_id:integer("user_id").references(()=>user.id),
+  unique_id:varchar("unique_id",{length:256}).notNull().unique(),
+  created_at:timestamp("created_at").defaultNow().notNull(),
+  updated_at:timestamp("updated_at").defaultNow().notNull(),
+})

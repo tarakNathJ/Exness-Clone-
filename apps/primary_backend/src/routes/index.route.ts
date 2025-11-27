@@ -8,6 +8,7 @@ import {
   get_user_balance,
   add_balance,
   // stop_loss_take_profit
+  take_profit_and_stop_loss
 } from "../controller/auth.controller.js";
 
 import { verify_JWT } from "../middleware/index.middleware.js";
@@ -23,6 +24,6 @@ route.post("/purchase-new-simple-trade", verify_JWT, purchase_new_trade);
 route.post("/sell-existing-simple-trade", verify_JWT, sell_existing_trade);
 route.get("/get-user-all-tread", verify_JWT, get_user_all_tread);
 route.get("/get-user-balance", verify_JWT, get_user_balance);
-// route.post("/stop-loss-take-profit", stop_loss_take_profit);
+route.post("/stop-loss-take-profit",verify_JWT ,take_profit_and_stop_loss);
 
 export default route;

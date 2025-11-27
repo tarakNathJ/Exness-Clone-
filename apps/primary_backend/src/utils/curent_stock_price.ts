@@ -3,7 +3,7 @@ import { config } from "dotenv";
 import { set_curent_price } from "../controller/auth.controller.js";
 config();
 
-class take_current_tread_price {
+class kafka_instance {
   private kafka: Kafka | undefined;
   private producer: Producer |undefined;
   private consumer: Consumer | undefined;
@@ -30,6 +30,7 @@ class take_current_tread_price {
         eachMessage: async ({ topic, partition, message }) => {
           const data = JSON.parse(message.value!.toString());
           if (!data) return;
+          console.log(data);
           ////////////////////////////update price //////////////////
           set_curent_price(data.data.s, parseFloat(data.data.c));
           ///////////////////////////////end/////////////////////////
@@ -77,4 +78,4 @@ class take_current_tread_price {
   }
 }
 
-export { take_current_tread_price };
+export { kafka_instance };

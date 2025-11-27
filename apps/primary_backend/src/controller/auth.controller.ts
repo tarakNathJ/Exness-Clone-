@@ -8,16 +8,19 @@ import {
   account_balance,
   tread,
   desc,
-  tread_type
+  options_tread,
+  user_unique_id,
 } from "@database/main/dist/index.js";
 import type { Request, Response } from "express";
 import bcrypt from "bcrypt";
 import JWT from "jsonwebtoken";
 import { and } from "drizzle-orm";
+import { kafka_instance } from "../utils/curent_stock_price.js";
 
-import { Kafka } from "kafkajs";
-
-// import { take_current_tread_price } from "../utils/curent_stock_price.js";
+const kafka = new kafka_instance(
+  process.env.KAFKA_GROUP_IDs!,
+  process.env.KAFKA_TOPICs!
+);
 
 const curent_price: any = {};
 
@@ -80,33 +83,47 @@ export const register_user = async_handler(async (req, res) => {
 
   const user_exist = await db.select().from(user).where(eq(user.email, email));
   if (user_exist.length > 0) {
-    
     throw new api_error(400, "user already exist try anather email");
   }
   const salt = await bcrypt.genSalt(10);
   const hashed_password = bcrypt.hashSync(password, salt);
   if (!hashed_password) throw new api_error(400, "generate solt failed");
 
-  const [add_new_user] = await db
-    .insert(user)
-    .values({
-      name: name,
-      email: email,
-      password: hashed_password,
-      is_active: true,
-    })
-    .returning({
-      name: user.name,
-      email: user.email,
-    });
+  const result = await db.transaction(async (tx) => {
+    const [add_new_user] = await tx
+      .insert(user)
+      .values({
+        name: name,
+        email: email,
+        password: hashed_password,
+        is_active: true,
+      })
+      .returning({
+        name: user.name,
+        email: user.email,
+        id: user.id,
+      });
 
-  if (!add_new_user) {
+    if (!add_new_user) throw new api_error(400, "database insert failed");
+
+    const [create_new_unique_id] = await tx
+      .insert(user_unique_id)
+      .values({
+        user_id: add_new_user.id,
+        unique_id: `${add_new_user.name}-${Date.now()}`,
+      })
+      .returning({
+        user_id: user_unique_id.user_id,
+        unique_id: user_unique_id.unique_id,
+      });
+    return { add_new_user, create_new_unique_id };
+  });
+
+  if (!result) {
     throw new api_error(400, "database insert failed");
   }
 
-  return new api_responce(201, "user added successfully", add_new_user).send(
-    res
-  );
+  return new api_responce(201, "user added successfully", result).send(res);
 });
 
 // login controller
@@ -197,19 +214,6 @@ export const add_balance = async_handler(async (req, res) => {
     throw new api_error(400, "please fill all the fields");
   }
 
-  const [user_are_exist] = await db
-    .select()
-    .from(user)
-    .where(eq(user.id, user_id));
-
-  if (
-    !user_are_exist ||
-    user_are_exist === undefined ||
-    user_are_exist === null
-  ) {
-    throw new api_error(400, "user not found");
-  }
-
   const [chack_balance_for_this_simbol_balance_exist] = await db
     .select()
     .from(account_balance)
@@ -266,18 +270,6 @@ export const purchase_new_trade = async_handler(async (req, res) => {
     throw new api_error(400, "please fill all the fields");
   }
 
-  const [user_are_exist] = await db
-    .select()
-    .from(user)
-    .where(eq(user.id, user_id));
-  if (
-    user_are_exist === undefined ||
-    user_are_exist === null ||
-    !user_are_exist
-  ) {
-    throw new api_error(400, "user not found");
-  }
-
   const [chack_balance_for_this_simbol_balance_exist] = await db
     .select()
     .from(account_balance)
@@ -291,9 +283,10 @@ export const purchase_new_trade = async_handler(async (req, res) => {
   if (!chack_balance_for_this_simbol_balance_exist) {
     throw new api_error(400, "balance not found");
   }
- const [chack_this_tread_exist] = await db.select().from(tread).where(and(eq(tread.symbol, symbol), eq(tread.user_id, user_id)))
-
-
+  const [chack_this_tread_exist] = await db
+    .select()
+    .from(tread)
+    .where(and(eq(tread.symbol, symbol), eq(tread.user_id, user_id)));
 
   const { price, status } = get_price_data_for_symbol(
     symbol,
@@ -301,7 +294,8 @@ export const purchase_new_trade = async_handler(async (req, res) => {
     chack_balance_for_this_simbol_balance_exist.balance
   );
 
-  const updated_price = chack_balance_for_this_simbol_balance_exist.balance - price;
+  const updated_price =
+    chack_balance_for_this_simbol_balance_exist.balance - price;
 
   if (!status) {
     throw new api_error(400, "insufficient balance");
@@ -315,9 +309,10 @@ export const purchase_new_trade = async_handler(async (req, res) => {
         quantity: quantity,
         symbol: symbol,
         user_id: user_id,
-        tread_type: "long" as const ,
-      }).onConflictDoUpdate({
-        target: [tread.symbol, tread.user_id , tread.tread_type],
+        tread_type: "long" as const,
+      })
+      .onConflictDoUpdate({
+        target: [tread.symbol, tread.user_id, tread.tread_type],
         set: {
           quantity: quantity + chack_this_tread_exist?.quantity,
         },
@@ -332,7 +327,7 @@ export const purchase_new_trade = async_handler(async (req, res) => {
     const [update_user_balance] = await tx
       .update(account_balance)
       .set({
-        balance: updated_price ,
+        balance: updated_price,
       })
       .where(
         and(
@@ -366,18 +361,6 @@ export const sell_existing_trade = async_handler(async (req, res) => {
 
   if (!symbol || !user_id || !quantity) {
     throw new api_error(400, "please fill all the fields");
-  }
-  const [user_are_exist] = await db
-    .select()
-    .from(user)
-    .where(eq(user.id, user_id));
-
-  if (
-    user_are_exist === undefined ||
-    user_are_exist === null ||
-    !user_are_exist
-  ) {
-    throw new api_error(400, "user not found");
   }
 
   const [chack_this_tread_exist] = await db
@@ -426,7 +409,7 @@ export const sell_existing_trade = async_handler(async (req, res) => {
       })
       .where(
         and(
-          eq(account_balance.user_id, user_are_exist.id),
+          eq(account_balance.user_id, user_id),
           eq(account_balance.symbol, "USD")
         )
       )
@@ -442,24 +425,10 @@ export const sell_existing_trade = async_handler(async (req, res) => {
   return new api_responce(201, "sell existing tread", result).send(res);
 });
 
-
 // get user balance
 export const get_user_balance = async_handler(async (req, res) => {
   // @ts-ignore
   const user_id = req.user.id;
-
-  const [user_are_exist] = await db
-    .select()
-    .from(user)
-    .where(eq(user.id, user_id));
-
-  if (
-    !user_are_exist ||
-    user_are_exist === undefined ||
-    user_are_exist === null
-  ){
-    throw new api_error(400, "user not found");
-  }
   const [user_balance] = await db
     .select()
     .from(account_balance)
@@ -470,39 +439,116 @@ export const get_user_balance = async_handler(async (req, res) => {
   }
 
   return new api_responce(200, "user balance", user_balance).send(res);
-
-})
-
+});
 
 // get user all tread
 export const get_user_all_tread = async_handler(async (req, res) => {
   // @ts-ignore
   const user_id = req.user.id;
-  const [user_are_exist] = await db
-    .select()
-    .from(user)
-    .where(eq(user.id, user_id));
-
-  if(
-    !user_are_exist ||
-    user_are_exist === undefined ||
-    user_are_exist === null
-  ){
-  throw new api_error(400, "user not found")
-  }
 
   const [user_treads] = await db
     .select()
     .from(tread)
     .where(eq(tread.user_id, user_id))
-    .orderBy(desc(tread.id))
+    .orderBy(desc(tread.id));
 
-  if(!user_treads || user_treads === undefined || user_treads === null){
-    throw new api_error(400, "tread not found")
+  if (!user_treads || user_treads === undefined || user_treads === null) {
+    throw new api_error(400, "tread not found");
   }
   return new api_responce(200, "user treads", user_treads).send(res);
-})
+});
 
+export const take_profit_and_stop_loss = async_handler(async (req, res) => {
+  const { symbol, quantity, type, take_profit, stop_loss } = req.body;
+  // @ts-ignore
 
+  // chack all data
+  // chack user balance are exist or not
+  // get current price
+  // create new tread
+  // return responce
 
+  const user_id = req.user.id;
 
+  if (!symbol || !user_id || !quantity || !type || !take_profit || !stop_loss) {
+    throw new api_error(400, "please fill all the fields");
+  }
+
+  const [chack_balance_are_exist] = await db
+    .select()
+    .from(account_balance)
+    .where(
+      and(
+        eq(account_balance.user_id, user_id),
+        eq(account_balance.symbol, "USD")
+      )
+    );
+
+  if (!chack_balance_are_exist) {
+    throw new api_error(400, "balance not found");
+  }
+
+  const { price, status } = get_price_data_for_symbol(
+    symbol,
+    quantity,
+    chack_balance_are_exist.balance
+  );
+
+  if (!status) {
+    throw new api_error(400, "insufficient balance");
+  }
+
+  const result = await db.transaction(async (tx) => {
+    const [create_new_trea] = await tx
+      .insert(options_tread)
+      .values({
+        symbol: symbol,
+        user_id: user_id,
+        quantity: quantity,
+        tread_type: type,
+        take_profit: take_profit,
+        stop_loss: stop_loss,
+        open_price: price,
+      })
+      .returning({
+        symbol: tread.symbol,
+        user_id: tread.user_id,
+        quantity: tread.quantity,
+      });
+
+    const [get_unique_id] = await tx
+      .select()
+      .from(user_unique_id)
+      .where(eq(user_unique_id.user_id, user_id));
+
+    if (!create_new_trea || !get_unique_id)
+      throw new api_error(400, "database insert failed");
+
+    const producer = await kafka.get_producer();
+    producer.send({
+      topic: process.env.KAFKA_TOPICs!,
+      messages: [
+        {
+          value: JSON.stringify({
+            type: "create_new_tread",
+            data: {
+              user_unique_id: get_unique_id.unique_id,
+              symbol: symbol,
+              quantity: quantity,
+              price: price,
+              type: type,
+              take_profit: take_profit,
+              stop_loss: stop_loss,
+            },
+          }),
+        },
+      ],
+    });
+
+    return true;
+  });
+
+  return new api_responce(201, "success fully create new tread", result).send(
+    res
+  );
+});

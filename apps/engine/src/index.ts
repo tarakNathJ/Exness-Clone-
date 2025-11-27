@@ -24,7 +24,18 @@ class engine {
         console.log({
           value: message.value?.toString(),
         });
+
+
+        consumer.commitOffsets([
+          {
+            topic,
+            partition,
+            offset: (Number(message.offset) + 1).toString(),
+          },
+        ]);
       },
+
+
     });
   }
 
