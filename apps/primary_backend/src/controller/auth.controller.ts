@@ -15,6 +15,8 @@ import bcrypt from "bcrypt";
 import JWT from "jsonwebtoken";
 import { and } from "drizzle-orm";
 
+import { Kafka } from "kafkajs";
+
 // import { take_current_tread_price } from "../utils/curent_stock_price.js";
 
 const curent_price: any = {};
@@ -500,3 +502,7 @@ export const get_user_all_tread = async_handler(async (req, res) => {
   }
   return new api_responce(200, "user treads", user_treads).send(res);
 })
+
+
+
+

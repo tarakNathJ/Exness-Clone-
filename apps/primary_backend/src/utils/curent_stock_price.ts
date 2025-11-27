@@ -1,27 +1,37 @@
-import { Kafka, type Consumer } from "kafkajs";
+import { Kafka, type Consumer, type Producer } from "kafkajs";
 import { config } from "dotenv";
-import {set_curent_price }from "../controller/auth.controller.js"
+import { set_curent_price } from "../controller/auth.controller.js";
 config();
 
 class take_current_tread_price {
   private kafka: Kafka | undefined;
-  private price_data: any = {};
+  private producer: Producer |undefined;
   private consumer: Consumer | undefined;
+  private kafka_topic: string | undefined;
+  private kafka_group_id: string | undefined;
 
-  constructor() {
-    this.init_consumer();
+  constructor(KAFKA_GROUP_ID: string, KAFKA_TOPIC: string) {
+    this.kafka_group_id = KAFKA_GROUP_ID;
+    this.kafka_topic = KAFKA_TOPIC;
+
+    this.kafka = new Kafka({
+      clientId: process.env.KAFKA_CLIENT_ID!,
+      brokers: [process.env.KAFKA_BROKER!],
+    });
+
+    
   }
 
   // kafka consumer consume binance data and  send all data
-  private async init_consumer() {
+  public async init_consumer() {
     try {
-      const get_consumer = await this.init_kafka(process.env.KAFKA_GROUP_ID!);
-      get_consumer.run({
+      const get_consumer = await this.init_kafka_consumer(this.kafka_group_id!);
+      get_consumer?.run({
         eachMessage: async ({ topic, partition, message }) => {
           const data = JSON.parse(message.value!.toString());
           if (!data) return;
           ////////////////////////////update price //////////////////
-          set_curent_price(data.data.s,parseFloat(data.data.c))    
+          set_curent_price(data.data.s, parseFloat(data.data.c));
           ///////////////////////////////end/////////////////////////
           get_consumer.commitOffsets([
             {
@@ -38,19 +48,15 @@ class take_current_tread_price {
     }
   }
 
-  //   init kafka
-  private async init_kafka(group_id: string) {
+  //   init kafka consumer
+  private async init_kafka_consumer(group_id: string) {
     try {
       if (this.consumer) return this.consumer;
 
-      const kafka_init = new Kafka({
-        clientId: process.env.KAFKA_CLIENT_ID!,
-        brokers: [process.env.KAFKA_BROKER!],
-      });
-      this.consumer = kafka_init.consumer({ groupId: group_id });
-      await this.consumer.connect();
-      await this.consumer.subscribe({
-        topic: process.env.KAFKA_TOPIC!,
+      this.consumer = this.kafka?.consumer({ groupId: group_id });
+      await this.consumer?.connect();
+      await this.consumer?.subscribe({
+        topic: this.kafka_topic!,
         fromBeginning: true,
       });
 
@@ -59,6 +65,15 @@ class take_current_tread_price {
       console.error("Error initializing Kafka:", error.message);
       throw error;
     }
+  }
+
+  // this is kafka producer
+  public async get_producer(): Promise<Producer> {
+    if (this.producer) return this.producer;
+    this.producer = this.kafka?.producer() as Producer;
+    await this.producer?.connect();
+
+    return this.producer
   }
 }
 

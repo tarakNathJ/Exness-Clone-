@@ -3,10 +3,19 @@
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
+  "type": "module",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "dev": "nodemon --exec \"npm run start\" --ext ts --watch src",
+    "start": "tsc && node dist/index.js"
   },
   "keywords": [],
   "author": "",
-  "license": "ISC"
+  "license": "ISC",
+  "dependencies": {
+    "dotenv": "^17.2.3",
+    "kafkajs": "^2.2.4"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.11"
+  }
 }
