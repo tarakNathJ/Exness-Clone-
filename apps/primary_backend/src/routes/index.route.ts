@@ -6,6 +6,7 @@ import {
   sell_existing_trade,
   get_user_all_tread,
   get_user_balance,
+  add_balance
 } from "../controller/auth.controller.js";
 
 import { verify_JWT } from "../middleware/index.middleware.js";
@@ -13,6 +14,7 @@ import express from "express";
 
 const route = express.Router();
 
+route.post("/add-balance", verify_JWT, add_balance);
 route.post("/register", register_user);
 route.post("/login", login_user);
 route.post("/forgot-password", forgot_password);

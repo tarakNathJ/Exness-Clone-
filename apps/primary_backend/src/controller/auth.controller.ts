@@ -7,13 +7,14 @@ import {
   eq,
   account_balance,
   tread,
-  desc
+  desc,
+  tread_type
 } from "@database/main/dist/index.js";
 import type { Request, Response } from "express";
 import bcrypt from "bcrypt";
 import JWT from "jsonwebtoken";
 import { and } from "drizzle-orm";
-import e from "express";
+
 // import { take_current_tread_price } from "../utils/curent_stock_price.js";
 
 const curent_price: any = {};
@@ -77,7 +78,7 @@ export const register_user = async_handler(async (req, res) => {
 
   const user_exist = await db.select().from(user).where(eq(user.email, email));
   if (user_exist.length > 0) {
-    console.log(user_exist);
+    
     throw new api_error(400, "user already exist try anather email");
   }
   const salt = await bcrypt.genSalt(10);
@@ -134,7 +135,7 @@ export const login_user = async_handler(async (req, res) => {
   }
 
   const token = JWT.sign(
-    { id: user_data.id },
+    { email: user_data.email },
     process.env.JWT_SECRET as string,
     { expiresIn: "1d" }
   );
@@ -189,6 +190,7 @@ export const add_balance = async_handler(async (req, res) => {
   const { symbol, balance } = req.body;
   // @ts-ignore
   const user_id = req.user.id;
+
   if (!symbol || !user_id || !balance) {
     throw new api_error(400, "please fill all the fields");
   }
@@ -215,9 +217,9 @@ export const add_balance = async_handler(async (req, res) => {
         eq(account_balance.user_id, user_id)
       )
     );
-  if (!chack_balance_for_this_simbol_balance_exist) {
-    throw new api_error(400, "balance not found");
-  }
+  // if (!chack_balance_for_this_simbol_balance_exist) {
+  //   // throw new api_error(400, "balance not found");
+  // }
   const [add_new_balance] = await db
     .insert(account_balance)
     .values({
@@ -228,7 +230,7 @@ export const add_balance = async_handler(async (req, res) => {
     .onConflictDoUpdate({
       target: [account_balance.symbol, account_balance.user_id],
       set: {
-        balance: balance + chack_balance_for_this_simbol_balance_exist.balance,
+        balance: balance + chack_balance_for_this_simbol_balance_exist?.balance,
       },
     })
     .returning({
@@ -287,12 +289,17 @@ export const purchase_new_trade = async_handler(async (req, res) => {
   if (!chack_balance_for_this_simbol_balance_exist) {
     throw new api_error(400, "balance not found");
   }
+ const [chack_this_tread_exist] = await db.select().from(tread).where(and(eq(tread.symbol, symbol), eq(tread.user_id, user_id)))
+
+
 
   const { price, status } = get_price_data_for_symbol(
     symbol,
     quantity,
     chack_balance_for_this_simbol_balance_exist.balance
   );
+
+  const updated_price = chack_balance_for_this_simbol_balance_exist.balance - price;
 
   if (!status) {
     throw new api_error(400, "insufficient balance");
@@ -306,7 +313,12 @@ export const purchase_new_trade = async_handler(async (req, res) => {
         quantity: quantity,
         symbol: symbol,
         user_id: user_id,
-        tread_type: "long",
+        tread_type: "long" as const ,
+      }).onConflictDoUpdate({
+        target: [tread.symbol, tread.user_id , tread.tread_type],
+        set: {
+          quantity: quantity + chack_this_tread_exist?.quantity,
+        },
       })
       .returning({
         id: tread.id,
@@ -314,10 +326,11 @@ export const purchase_new_trade = async_handler(async (req, res) => {
         quantity: tread.quantity,
         symbol: tread.symbol,
       });
+
     const [update_user_balance] = await tx
       .update(account_balance)
       .set({
-        balance: chack_balance_for_this_simbol_balance_exist.balance - price,
+        balance: updated_price ,
       })
       .where(
         and(
