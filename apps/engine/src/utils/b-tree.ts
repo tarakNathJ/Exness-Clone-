@@ -4,13 +4,13 @@ class order_book {
     
     // add treade
     add_order ( side : string, price : number, order : object){
-        const order_book = side === "buy" ? this.buy : this.sell;
+        const order_book = side === "long" ? this.buy : this.sell;
         if(!order_book.has(price)) order_book.set(price, []);
         order_book.get(price).push(order);
     }
     // delete treade
     delete_order (user_id:number ,side :string){
-        const order_book = side === "buy" ? this.buy : this.sell;
+        const order_book = side === "long" ? this.buy : this.sell;
 
         for (const [price, orders] of order_book) {
             const index = orders.findIndex((order:any) => order.user === user_id);
@@ -28,7 +28,7 @@ class order_book {
     }
 
     get_order_book (side : string , price : number){
-        const order_book = side === "buy" ? this.buy : this.sell;   
+        const order_book = side === "long" ? this.buy : this.sell;   
         return  order_book.get(price) || [];
     }
 }

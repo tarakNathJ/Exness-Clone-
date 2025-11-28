@@ -530,7 +530,7 @@ export const take_profit_and_stop_loss = async_handler(async (req, res) => {
       messages: [
         {
           value: JSON.stringify({
-            type: "create_new_tread",
+            type: "new_tread",
             data: {
               user_unique_id: get_unique_id.unique_id,
               symbol: symbol,

@@ -1,13 +1,15 @@
 import { ring_buffer } from "./utils/ring_buffer.js";
 import { order_book } from "./utils/b-tree.js";
 import { kafka_instance } from "./utils/kafka_instance_provider.js";
+import type { Producer } from "kafkajs";
 
 class tread_executer_engine {
   private ring_buffer: ring_buffer = new ring_buffer(32);
   private order_book: order_book = new order_book();
   private kafka_instance_for_current_trade_data: kafka_instance | undefined;
   private kafka_instance_for_user_tread: kafka_instance | undefined;
-  private current_trade_market_price_with_symbol: any = {};
+  private producer: Producer | undefined;
+
   constructor() {
     this.kafka_instance_for_current_trade_data = new kafka_instance(
       process.env.KAFKA_CLIENT_ID!,
@@ -17,31 +19,75 @@ class tread_executer_engine {
       process.env.KAFKA_CLIENT_ID!,
       process.env.KAFKA_BROKER!
     );
+
+    this.kafka_producer();
   }
 
-  // store updated  price
-  private async store_current_trade_data(symbol: string, price: number) {
-    if (this.current_trade_market_price_with_symbol[symbol]) {
-      this.current_trade_market_price_with_symbol[symbol].price = price;
-    } else {
-      this.current_trade_market_price_with_symbol[symbol] = { rice: price };
-    }
+  private async kafka_producer() {
+    this.producer = await this.kafka_instance_for_user_tread!.kafka_producer();
+    await this.producer.connect();
   }
 
-  // get curent market price
-  async get_current_market_price(group_id: string, topic: string) {
+  public async get_current_market_price(group_id: string, topic: string) {
     const consumer =
       await this.kafka_instance_for_current_trade_data!.kafka_consumer(
         group_id,
         topic
       );
     consumer.run({
+
       eachMessage: async ({ topic, partition, message }: any) => {
+
+
         const data = JSON.parse(message.value!.toString());
         if (!data.data) return;
 
-        // set current trade price
-        this.store_current_trade_data(data.data.s, parseFloat(data.data.c));
+
+        const tread_data = {
+          symbol: data.data.s,
+          price: parseFloat(data.data.c),
+        };
+
+
+        this.ring_buffer.ring_publish(tread_data);
+
+        
+        const event = this.ring_buffer.ring_consumer();
+        if (!event) return;
+
+        // calculate takeProfit stoploss
+        for (let [price, orders] of this.order_book.buy.entries()) {
+          for (const order of orders) {
+            if (event.symbol === order.symbol) {
+              await this.calculate_take_profit_stop_loss_for_buyers(
+                event.price,
+                order.take_profit,
+                order.stop_loss,
+                price,
+                order.qty,
+                order.symbol,
+                order.user
+              );
+            }
+          }
+        }
+
+        for (let [price, orders] of this.order_book.sell.entries()) {
+          for (const order of orders) {
+            if (event.symbol === order.symbol) {
+              await this.calculate_take_profit_stop_loss_for_seller(
+                event.price,
+                order.take_profit,
+                order.stop_loss,
+                price,
+                order.qty,
+                order.symbol,
+                order.user
+              );
+            }
+          }
+        }
+
 
         consumer.commitOffsets([
           {
@@ -54,7 +100,7 @@ class tread_executer_engine {
     });
   }
 
-  async get_user_tread(group_id: string, topic: string) {
+  public async get_user_tread(group_id: string, topic: string) {
     const consume = await this.kafka_instance_for_user_tread!.kafka_consumer(
       group_id,
       topic
@@ -63,46 +109,125 @@ class tread_executer_engine {
       eachMessage: async ({ topic, partition, message }) => {
         const data = JSON.parse(message.value!.toString());
         if (!data) return;
-        if(data.type === "create_new_tread"){
-            
+
+        if (data.type === "new_tread") {
+          this.order_book.add_order("long", data.data.price, {
+            user: data.data.user_unique_id,
+            qty: data.data.quantity,
+            take_profit: data.data.take_profit,
+            stop_loss: data.data.stop_loss,
+            symbol: data.data.symbol,
+          });
         }
 
+        consume.commitOffsets([
+          {
+            topic,
+            partition,
+            offset: (Number(message.offset) + 1).toString(),
+          },
+        ]);
       },
+    });
+  }
+
+  private async calculate_take_profit_stop_loss_for_buyers(
+    current_stock_price: number,
+    tp: number,
+    sl: number,
+    price: number,
+    quentity: number,
+    symbol: string,
+    user_id: string
+  ) {
+    if (current_stock_price * quentity >= tp) {
+      this.send_message_from_user(
+        current_stock_price * quentity,
+        symbol,
+        user_id,
+        "take profit hit"
+      );
+    } else if (
+      current_stock_price * quentity < tp &&
+      current_stock_price * quentity > sl
+    ) {
+      this.send_message_from_user(
+        current_stock_price * quentity,
+        symbol,
+        user_id,
+        "trade hold"
+      );
+    } else if (current_stock_price * quentity <= sl) {
+      this.send_message_from_user(
+        current_stock_price * quentity,
+        symbol,
+        user_id,
+        "stop loss hit"
+      );
+    }
+  }
+  private async calculate_take_profit_stop_loss_for_seller(
+    current_stock_price: number,
+    tp: number,
+    sl: number,
+    price: number,
+    quentity: number,
+    symbol: string,
+    user_id: string
+  ) {
+    if (current_stock_price * quentity <= tp) {
+      this.send_message_from_user(
+        current_stock_price * quentity,
+        symbol,
+        user_id,
+        "take profit hit"
+      );
+    } else if (
+      current_stock_price * quentity > tp &&
+      current_stock_price * quentity < sl
+    ) {
+      this.send_message_from_user(
+        current_stock_price * quentity,
+        symbol,
+        user_id,
+        "trade hold"
+      );
+    } else if (current_stock_price * quentity >= sl) {
+      this.send_message_from_user(
+        current_stock_price * quentity,
+        symbol,
+        user_id,
+        "stop loss hit"
+      );
+    }
+  }
+
+  private send_message_from_user(
+    current_price: number,
+    symbol: string,
+    user_id: string,
+    message:string
+  ) {
+    this.producer?.send({
+      topic: process.env.KAFKA_USER_TREAD_TOPIC!,
+      messages: [
+        {
+          value: JSON.stringify({
+            type: "tread_status",
+            data: {
+              current_price,
+              symbol,
+              user_id,
+              message
+            },
+          }),
+        },
+      ],
     });
   }
 }
 
-// const ring = new ring_buffer(32);
-// const book = new order_book();
 
-// for (let u = 1; u <= 10; u++) {
-//   const randomPrice = 100 + Math.floor(Math.random() * 20);
-
-//   book.add_order("buy", randomPrice, {
-//     user: u,
-//     qty: 1,
-//     takeProfit: randomPrice + 5,
-//     stopLoss: randomPrice - 5,
-//   });
-// }
-
-// setInterval(() => {
-//   const tick = {
-//     price: 100 + Math.floor(Math.random() * 20),
-//     time: Date.now(),
-//   };
-//   ring.ring_publish(tick);
-// }, 1000);
-
-// setInterval(() => {
-//   const event = ring.ring_consumer();
-//   if (!event) return;
-//   console.log(" curent stock price:  ", event);
-
-//   for (let [price, orders] of book.buy.entries()) {
-//     console.log("price ",price);
-//     for (const order of orders) {
-//       console.log( "user data order :",order);
-//     }
-//   }
-// });
+const get_market_data =  new tread_executer_engine();
+get_market_data.get_current_market_price(process.env.MARKET_KAFKA_GROUP_ID!, process.env.MARKET_KAFKA_TOPIC!);
+get_market_data.get_user_tread(process.env.USER_KAFKA_GROUP_ID!, process.env.USER_KAFKA_TOPIC!);
