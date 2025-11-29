@@ -141,6 +141,10 @@ class tread_executer_engine {
     user_id: string
   ) {
     if (current_stock_price * quentity >= tp) {
+
+      console.log(user_id , "  delete user");
+      this.order_book.delete_order(user_id,"long")
+
       this.send_message_from_user(
         current_stock_price * quentity,
         symbol,
@@ -158,6 +162,7 @@ class tread_executer_engine {
         "trade hold"
       );
     } else if (current_stock_price * quentity <= sl) {
+      this.order_book.delete_order(user_id,"long")
       this.send_message_from_user(
         current_stock_price * quentity,
         symbol,
@@ -176,6 +181,8 @@ class tread_executer_engine {
     user_id: string
   ) {
     if (current_stock_price * quentity <= tp) {
+
+      this.order_book.delete_order(user_id,"short")
       this.send_message_from_user(
         current_stock_price * quentity,
         symbol,
@@ -193,6 +200,8 @@ class tread_executer_engine {
         "trade hold"
       );
     } else if (current_stock_price * quentity >= sl) {
+
+      this.order_book.delete_order(user_id,"short")
       this.send_message_from_user(
         current_stock_price * quentity,
         symbol,

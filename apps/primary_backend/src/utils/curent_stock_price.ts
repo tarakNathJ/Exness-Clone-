@@ -29,7 +29,7 @@ class kafka_instance {
         eachMessage: async ({ topic, partition, message }) => {
           const data = JSON.parse(message.value!.toString());
           if (!data) return;
-          console.log(data);
+          // console.log(data);
           ////////////////////////////update price //////////////////
           set_curent_price(data.data.s, parseFloat(data.data.c));
           ///////////////////////////////end/////////////////////////
@@ -105,8 +105,8 @@ class kafka_instance {
       const consumer = await this.kafka_second_consumer_for_user_tread(group_id, topic);
       consumer?.run({
         eachMessage: async ({ topic, partition, message }) => {
-          const data = JSON.parse(JSON.stringify(message.value));
-          console.log(data);
+         const data = JSON.parse(message.value!.toString());
+         console.log(data);
 
           consumer.commitOffsets([
             {

@@ -9,7 +9,7 @@ class order_book {
         order_book.get(price).push(order);
     }
     // delete treade
-    delete_order (user_id:number ,side :string){
+    delete_order (user_id:string ,side :string){
         const order_book = side === "long" ? this.buy : this.sell;
 
         for (const [price, orders] of order_book) {

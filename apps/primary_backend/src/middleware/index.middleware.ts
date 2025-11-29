@@ -16,7 +16,7 @@ export const verify_JWT = async_handler(async (req, _, next) => {
     if (!token) {
       throw new api_error(401, "Unauthorized request",Error.prototype);
     }
-    const  ACCESS_TOKEN =   process.env.ACCESS_TOKEN_SECRET;
+    const  ACCESS_TOKEN =   process.env.JWT_SECRET;
     if(!ACCESS_TOKEN){
         throw new api_error(401, "env not exist",Error.prototype);
     }
