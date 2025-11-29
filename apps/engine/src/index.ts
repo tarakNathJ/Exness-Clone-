@@ -208,6 +208,8 @@ class tread_executer_engine {
     user_id: string,
     message:string
   ) {
+
+    
     this.producer?.send({
       topic: process.env.KAFKA_USER_TREAD_TOPIC!,
       messages: [
@@ -231,3 +233,30 @@ class tread_executer_engine {
 const get_market_data =  new tread_executer_engine();
 get_market_data.get_current_market_price(process.env.MARKET_KAFKA_GROUP_ID!, process.env.MARKET_KAFKA_TOPIC!);
 get_market_data.get_user_tread(process.env.USER_KAFKA_GROUP_ID!, process.env.USER_KAFKA_TOPIC!);
+
+
+
+/*
+
+/opt/kafka/bin/kafka-topics.sh --create \
+  --topic TRADE \
+  --bootstrap-server localhost:9092 \
+  --partitions 1 \
+  --replication-factor 1
+
+/opt/kafka/bin/kafka-topics.sh --create \
+  --topic MARKET-DATA \
+  --bootstrap-server localhost:9092 \
+  --partitions 1 \
+  --replication-factor 1
+
+/opt/kafka/bin/kafka-topics.sh --create \
+  --topic USER-TRADE \
+  --bootstrap-server localhost:9092 \
+  --partitions 1 \
+  --replication-factor 1
+
+
+
+
+*/

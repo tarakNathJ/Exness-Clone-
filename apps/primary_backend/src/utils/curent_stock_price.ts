@@ -7,6 +7,7 @@ class kafka_instance {
   private kafka: Kafka | undefined;
   private producer: Producer | undefined;
   private consumer: Consumer | undefined;
+  private consumer2:Consumer |undefined
   private kafka_topic: string | undefined;
   private kafka_group_id: string | undefined;
 
@@ -23,7 +24,7 @@ class kafka_instance {
   // kafka consumer consume binance data and  send all data
   public async init_consumer() {
     try {
-      const get_consumer = await this.init_kafka_consumer(this.kafka_group_id!);
+      const get_consumer = await this.init_kafka_consumer(this.kafka_group_id! , this.kafka_topic!);
       get_consumer?.run({
         eachMessage: async ({ topic, partition, message }) => {
           const data = JSON.parse(message.value!.toString());
@@ -78,9 +79,30 @@ class kafka_instance {
     return this.producer;
   }
 
+  private async kafka_second_consumer_for_user_tread (
+    group_id: string,
+    topic: string = this.kafka_topic!
+  ) {
+    try {
+      if (this.consumer2) return this.consumer2;
+
+      this.consumer2 = this.kafka?.consumer({ groupId: group_id });
+      await this.consumer2?.connect();
+      await this.consumer2?.subscribe({
+        topic: topic,
+        fromBeginning: true,
+      });
+
+      return this.consumer2;
+    } catch (error: any) {
+      console.error("Error initializing Kafka:", error.message);
+      throw error;
+    }
+  }
+
   public async get_user_trade_data(group_id: string, topic: string) {
     try {
-      const consumer = await this.init_kafka_consumer(group_id, topic);
+      const consumer = await this.kafka_second_consumer_for_user_tread(group_id, topic);
       consumer?.run({
         eachMessage: async ({ topic, partition, message }) => {
           const data = JSON.parse(JSON.stringify(message.value));
