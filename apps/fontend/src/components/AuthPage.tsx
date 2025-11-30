@@ -1,7 +1,8 @@
 import React, { useState } from "react";
 import { Mail, Lock, Eye, EyeOff, Shield, TrendingUp } from "lucide-react";
 import { api_init } from "./api/auth.js";
-import { toast } from "./ui/use-toast.js";
+import axios from "axios";
+
 import { useNavigate } from "react-router-dom";
 
 export function AuthPage({
@@ -9,57 +10,77 @@ export function AuthPage({
 }: {
   onNavigate: (page: string) => void;
 }) {
-  const navigate = useNavigate()
+  const navigate = useNavigate();
   const [email, setEmail] = useState("");
-  const [user,setUserName] = useState("");
-  const [password ,setPassword] = useState("")
+  const [user, setUserName] = useState("");
+  const [password, setPassword] = useState("");
   const [isLogin, setIsLogin] = useState(true);
   const [showPassword, setShowPassword] = useState(false);
 
-const onSubmit = async () => {
- 
-  if (!email.trim()) {
-    alert("Email is required");
-    return;
-  }
+  const onSubmit = async () => {
 
- 
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  if (!emailRegex.test(email)) {
-    alert("Invalid email format");
-    return;
-  }
+    if (!email.trim()) {
+      alert("Email is required");
+      return;
+    }
 
+    console.log(import.meta.env.VITE_API_URL)
 
-  if (!password.trim()) {
-    alert("Password is required");
-    return;
-  }
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      alert("Invalid email format");
+      return;
+    }
 
-  
-  if (isLogin) {
-    
-    const result =  await  api_init("/api/login",{
-      // @ts-ignore
-        email:email,
-        password:password,
-      })
+    if (!password.trim()) {
+      alert("Password is required");
+      return;
+    }
 
-      if(result.data.success){
-        navigate("/trade")
+    if (isLogin) {
+      try {
+        const result = await axios.post(
+          `${import.meta.env.VITE_API_URL}/api/login`,
+          {
+            email: email,
+            password: password,
+          },
+          {
+            headers: {
+              "Content-Type": "application/json",
+            },
+          }
+        );
+        if (result.data.success) {
+          navigate("/trade");
+        }
+
+        console.log(result);
+      } catch (error: any) {}
+    } else {
+      if (!user.trim()) {
+        alert("user name is required");
+        return;
       }
-  } else {
-    
-    const result = await api_init("/api/register",{
-      //@ts-ignore
-      name:user,
-      email:email,
-      password:password
-    })
-  }
-};
- 
 
+      const result = await axios.post(
+        `${import.meta.env.VITE_API_URL}/api/register`,
+        {
+          name:user,
+          email: email,
+          password: password,
+        },
+        {
+          headers: {
+            "Content-Type": "application/json",
+          },
+        }
+      );
+      if (result.data.success) {
+        navigate("/trade");
+      }
+    }
+  };
 
   return (
     <div className="min-h-screen flex">
@@ -94,7 +115,7 @@ const onSubmit = async () => {
               <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
               <input
                 type="name"
-                onChange={(e)=>setUserName(e.target.value)}
+                onChange={(e) => setUserName(e.target.value)}
                 placeholder="Entter your name"
                 className="w-full pl-12 pr-4 py-3 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:border-teal-500"
               />
@@ -109,7 +130,7 @@ const onSubmit = async () => {
             <div className="relative">
               <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
               <input
-              onChange={(e)=>setEmail(e.target.value)}
+                onChange={(e) => setEmail(e.target.value)}
                 type="email"
                 placeholder="your@email.com"
                 className="w-full pl-12 pr-4 py-3 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:border-teal-500"
@@ -127,7 +148,7 @@ const onSubmit = async () => {
               <input
                 type={showPassword ? "text" : "password"}
                 placeholder="••••••••"
-                onChange={(e)=>setPassword(e.target.value)}
+                onChange={(e) => setPassword(e.target.value)}
                 className="w-full pl-12 pr-12 py-3 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:border-teal-500"
               />
               <button
