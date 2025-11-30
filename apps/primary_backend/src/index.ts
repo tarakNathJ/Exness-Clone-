@@ -12,3 +12,4 @@ const express_instance =  server.start_server(Number(process.env.PORT  || 3000))
 const kafka  = new kafka_instance( process.env.KAFKA_GROUP_ID!, process.env.KAFKA_TOPIC!);
 kafka.init_consumer();
 kafka.get_user_trade_data(process.env.KAFKA_GROUP_ID_PRIMARY! , process.env.KAFKA_TOPIC_PRIMARY!)
+kafka.start_ws_server_and_serve(express_instance);
