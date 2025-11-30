@@ -4,7 +4,7 @@ import { LandingPage } from "./components/LandingPage.jsx";
 import { ThemeProvider } from "./components/ThemeProvider.js";
 import { Routes, Route } from "react-router-dom";
 import { AuthPage } from "./components/AuthPage.jsx";
-import { Dashboard } from "./components/Dashboard.jsx";
+
 import { Layout } from "./components/Layout.jsx";
 import { MarketsPage } from "./components/MarketsPage.jsx";
 import { PortfolioPage } from "./components/PortfolioPage.jsx";
@@ -59,7 +59,7 @@ function App() {
                 />
               }
             />
-            <Route path="/dashboard" element={<Dashboard />} />
+            
             <Route path="/markets" element={<MarketsPage />} />
             <Route path="/portfolio" element={<PortfolioPage />} />
             <Route path="/trade" element={<TradePage />} />

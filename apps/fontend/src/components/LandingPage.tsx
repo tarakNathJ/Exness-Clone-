@@ -58,7 +58,7 @@ const navigator = useNavigate();
                 Start Trading Free
               </button>
               <button 
-                onClick={() => navigator("/dashboard")}
+                
                 className="px-8 py-4 rounded-xl bg-white dark:bg-slate-800 text-slate-900 dark:text-white border border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600 transition-all"
               >
                 View Demo

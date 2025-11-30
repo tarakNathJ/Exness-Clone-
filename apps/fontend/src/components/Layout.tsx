@@ -16,7 +16,7 @@ export function Layout({ children, currentPage, onNavigate }: LayoutProps) {
   
   const navigation = [
     { name: 'Home', icon: Home, page: '/' },
-    { name: 'Dashboard', icon: LayoutDashboard, page: '/dashboard' },
+    
     { name: 'Markets', icon: TrendingUp, page: '/markets' },
     { name: 'Portfolio', icon: Wallet, page: '/portfolio' },
     { name: 'Trade', icon: ArrowLeftRight, page: '/trade' },
