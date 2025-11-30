@@ -1,14 +1,14 @@
 import init_express_server from "./app.js";
-import {create_ws_server} from "./web_socket_server/index.js"
+
 import {config} from "dotenv"
-import {kafka_instance } from './utils/curent_stock_price.js'
+import {kafka_instance } from './utils/ws_server_and_kafka_instance.js'
 
 config()
 
 const server = new init_express_server()
 
 const express_instance =  server.start_server(Number(process.env.PORT  || 3000));
-// new create_ws_server(express_instance).start_server()
+
 const kafka  = new kafka_instance( process.env.KAFKA_GROUP_ID!, process.env.KAFKA_TOPIC!);
 kafka.init_consumer();
 kafka.get_user_trade_data(process.env.KAFKA_GROUP_ID_PRIMARY! , process.env.KAFKA_TOPIC_PRIMARY!)

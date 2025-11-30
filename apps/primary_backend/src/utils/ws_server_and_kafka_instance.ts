@@ -125,6 +125,7 @@ class kafka_instance {
           let data: any;
           try {
             data = JSON.parse(message.value!.toString()) || {};
+            
           } catch (error: any) {
             console.log("samthing want wrong", error.message);
             return;

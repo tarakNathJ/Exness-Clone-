@@ -15,7 +15,7 @@ import type { Request, Response } from "express";
 import bcrypt from "bcrypt";
 import JWT from "jsonwebtoken";
 import { and } from "drizzle-orm";
-import { kafka_instance } from "../utils/curent_stock_price.js";
+import { kafka_instance } from "../utils/ws_server_and_kafka_instance.js";
 
 const kafka = new kafka_instance(
   process.env.KAFKA_GROUP_IDs!,
