@@ -1,5 +1,5 @@
 import React from 'react';
-import { LayoutDashboard, TrendingUp, Wallet, ArrowLeftRight, Settings, Sun, Moon, LogOut, Menu, X  ,Home} from 'lucide-react';
+import { LayoutDashboard, TrendingUp, Wallet, ArrowLeftRight, Sun, Moon, LogOut, Menu, X  ,Home} from 'lucide-react';
 import { useTheme } from './ThemeProvider';
 import { useNavigate } from 'react-router-dom';
 

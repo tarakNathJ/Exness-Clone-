@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Mail, Lock, Eye, EyeOff, Shield, TrendingUp } from 'lucide-react';
+import {api_init} from "./api/auth.js"
 
 export function AuthPage({ onNavigate }: { onNavigate: (page: string) => void }) {
   const [isLogin, setIsLogin] = useState(true);
