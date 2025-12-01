@@ -2,6 +2,7 @@ import { ring_buffer } from "./utils/ring_buffer.js";
 import { order_book } from "./utils/b-tree.js";
 import { kafka_instance } from "./utils/kafka_instance_provider.js";
 import type { Producer } from "kafkajs";
+import { cancel_tread } from "./utils/cancel_tread_function.js";
 
 class tread_executer_engine {
   private ring_buffer: ring_buffer = new ring_buffer(32);
@@ -35,23 +36,17 @@ class tread_executer_engine {
         topic
       );
     consumer.run({
-
       eachMessage: async ({ topic, partition, message }: any) => {
-
-
         const data = JSON.parse(message.value!.toString());
         if (!data.data) return;
-
 
         const tread_data = {
           symbol: data.data.s,
           price: parseFloat(data.data.c),
         };
 
-
         this.ring_buffer.ring_publish(tread_data);
 
-        
         const event = this.ring_buffer.ring_consumer();
         if (!event) return;
 
@@ -66,7 +61,8 @@ class tread_executer_engine {
                 price,
                 order.qty,
                 order.symbol,
-                order.user
+                order.user,
+                order.id
               );
             }
           }
@@ -82,12 +78,12 @@ class tread_executer_engine {
                 price,
                 order.qty,
                 order.symbol,
-                order.user
+                order.user,
+                order.id
               );
             }
           }
         }
-
 
         consumer.commitOffsets([
           {
@@ -117,14 +113,14 @@ class tread_executer_engine {
             take_profit: data.data.take_profit,
             stop_loss: data.data.stop_loss,
             symbol: data.data.symbol,
-            id:data.data.id
+            id: data.data.id,
           });
-        }else if(data.type === "cancel_trade"){
+        } else if (data.type === "cancel_trade") {
           const id = data.data.id;
           const type = data.data.type;
-          const  qty = data.data.quantity
-          if(!id) return
-          this.order_book.cancel_trade(id,type ,qty);
+          const qty = data.data.quantity;
+          if (!id) return;
+          this.order_book.cancel_trade(id, type, qty);
         }
 
         consume.commitOffsets([
@@ -145,19 +141,21 @@ class tread_executer_engine {
     price: number,
     quentity: number,
     symbol: string,
-    user_id: string
+    user_id: string,
+    id: number
   ) {
     if (current_stock_price * quentity >= tp) {
-
-      console.log(user_id , "  delete user");
-      this.order_book.delete_order(user_id,"long")
-
-      this.send_message_from_user(
-        current_stock_price * quentity,
-        symbol,
-        user_id,
-        "take profit hit"
-      );
+      console.log(user_id, "  delete user");
+      this.order_book.delete_order(user_id, "long");
+      const status = await cancel_tread(current_stock_price * quentity, id);
+      if (status) {
+        this.send_message_from_user(
+          current_stock_price * quentity,
+          symbol,
+          user_id,
+          "take profit hit"
+        );
+      }
     } else if (
       current_stock_price * quentity < tp &&
       current_stock_price * quentity > sl
@@ -169,13 +167,16 @@ class tread_executer_engine {
         "trade hold"
       );
     } else if (current_stock_price * quentity <= sl) {
-      this.order_book.delete_order(user_id,"long")
-      this.send_message_from_user(
-        current_stock_price * quentity,
-        symbol,
-        user_id,
-        "stop loss hit"
-      );
+      this.order_book.delete_order(user_id, "long");
+      const status = await cancel_tread(current_stock_price * quentity, id);
+      if (status) {
+        this.send_message_from_user(
+          current_stock_price * quentity,
+          symbol,
+          user_id,
+          "stop loss hit"
+        );
+      }
     }
   }
   private async calculate_take_profit_stop_loss_for_seller(
@@ -185,17 +186,20 @@ class tread_executer_engine {
     price: number,
     quentity: number,
     symbol: string,
-    user_id: string
+    user_id: string,
+    id: number
   ) {
     if (current_stock_price * quentity <= tp) {
-
-      this.order_book.delete_order(user_id,"short")
-      this.send_message_from_user(
-        current_stock_price * quentity,
-        symbol,
-        user_id,
-        "take profit hit"
-      );
+      this.order_book.delete_order(user_id, "short");
+      const status = await cancel_tread(current_stock_price * quentity, id);
+      if (status) {
+        this.send_message_from_user(
+          current_stock_price * quentity,
+          symbol,
+          user_id,
+          "take profit hit"
+        );
+      }
     } else if (
       current_stock_price * quentity > tp &&
       current_stock_price * quentity < sl
@@ -207,14 +211,16 @@ class tread_executer_engine {
         "trade hold"
       );
     } else if (current_stock_price * quentity >= sl) {
-
-      this.order_book.delete_order(user_id,"short")
-      this.send_message_from_user(
-        current_stock_price * quentity,
-        symbol,
-        user_id,
-        "stop loss hit"
-      );
+      this.order_book.delete_order(user_id, "short");
+      const status = await cancel_tread(current_stock_price * quentity, id);
+      if (status) {
+        this.send_message_from_user(
+          current_stock_price * quentity,
+          symbol,
+          user_id,
+          "stop loss hit"
+        );
+      }
     }
   }
 
@@ -222,10 +228,8 @@ class tread_executer_engine {
     current_price: number,
     symbol: string,
     user_id: string,
-    message:string
+    message: string
   ) {
-
-    
     this.producer?.send({
       topic: process.env.KAFKA_USER_TREAD_TOPIC!,
       messages: [
@@ -236,7 +240,7 @@ class tread_executer_engine {
               current_price,
               symbol,
               user_id,
-              message
+              message,
             },
           }),
         },
@@ -245,12 +249,15 @@ class tread_executer_engine {
   }
 }
 
-
-const get_market_data =  new tread_executer_engine();
-get_market_data.get_current_market_price(process.env.MARKET_KAFKA_GROUP_ID!, process.env.MARKET_KAFKA_TOPIC!);
-get_market_data.get_user_tread(process.env.USER_KAFKA_GROUP_ID!, process.env.USER_KAFKA_TOPIC!);
-
-
+const get_market_data = new tread_executer_engine();
+get_market_data.get_current_market_price(
+  process.env.MARKET_KAFKA_GROUP_ID!,
+  process.env.MARKET_KAFKA_TOPIC!
+);
+get_market_data.get_user_tread(
+  process.env.USER_KAFKA_GROUP_ID!,
+  process.env.USER_KAFKA_TOPIC!
+);
 
 /*
 
