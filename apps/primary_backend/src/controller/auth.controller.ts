@@ -448,7 +448,9 @@ export const get_user_balance = async_handler(async (req, res) => {
       open: options_tread.open_price,
       close: options_tread.close_price,
       symbol: options_tread.symbol,
-      qty:options_tread.quantity
+      qty:options_tread.quantity,
+      type:options_tread.tread_type,
+      date:options_tread.created_at
     })
     .from(options_tread)
     .where(eq(options_tread.user_id, user_id));
