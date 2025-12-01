@@ -562,33 +562,48 @@ export const cancel_tread_for_take_profit_and_stop_loss = async_handler(
     //@ts-ignore
     const user_id = req.user.id;
 
-    const [find_tread] = await db
-      .select({
-        id: tread.id,
-        type: tread.tread_type,
-        quantity: tread.quantity,
-      })
-      .from(tread)
-      .where(eq(tread.id, id));
-    if (!find_tread) throw new api_error(400, "your tread not find");
-    const producer = await kafka.get_producer();
-    producer.send({
-      topic: process.env.KAFKA_TOPICs!,
-      messages: [
-        {
-          value: JSON.stringify({
-            type: "cancel_trade",
-            data: {
-              id: find_tread.id,
-              type: find_tread.type,
-              quantity: find_tread.quantity,
-            },
-          }),
-        },
-      ],
+    if(!user_id || !id) throw new api_error(400,"please fill all the fields")
+
+    const result = await db.transaction(async (tx) => {
+      const [find_tread] = await tx
+        .select({
+          id: options_tread.id,
+          type: options_tread.tread_type,
+          quantity: options_tread.quantity,
+          symbol:options_tread.symbol
+        })
+        .from(options_tread)
+        .where(eq(options_tread.id, id));
+
+      if( !find_tread?.symbol || !find_tread.quantity) return false
+       const {price}  =  get_price_data_for_symbol(find_tread?.symbol , find_tread?.quantity , 1)
+    
+      const [status] = await tx.update(options_tread).set({close_price:price,updated_at: new Date }).where(eq(options_tread.id,find_tread.id)).returning({id:options_tread.id})
+    
+
+      if (!find_tread) throw new api_error(400, "your tread not find");
+      const producer = await kafka.get_producer();
+      producer.send({
+        topic: process.env.KAFKA_TOPICs!,
+        messages: [
+          {
+            value: JSON.stringify({
+              type: "cancel_trade",
+              data: {
+                id: find_tread.id,
+                type: find_tread.type,
+                quantity: find_tread.quantity,
+              },
+            }),
+          },
+        ],
+      });
+
+
+      return status
     });
 
 
-    return new api_responce(200, "success fully cancel tread").send(req)
+    return new api_responce(200, "success fully cancel tread",result).send(res);
   }
 );
