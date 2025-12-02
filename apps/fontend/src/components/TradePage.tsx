@@ -1,354 +1,773 @@
-import React, { useState } from 'react';
-import { TrendingUp, TrendingDown, Info, Pencil, TrendingUpIcon, MinusIcon, ZapIcon, Clock } from 'lucide-react';
-import { TradingViewChart } from './TradingViewChart';
+import React, { useState, useEffect, useRef, useCallback } from "react";
+import { TrendingUp, Info, Pencil, Minus, Clock, Zap } from "lucide-react";
+import { TradingViewChart } from "./TradingViewChart";
 
-const candleData = [
-  { time: '2025-11-22 09:00', open: 45200, high: 45800, low: 45000, close: 45600, volume: 2400000 },
-  { time: '2025-11-22 09:15', open: 45600, high: 46200, low: 45400, close: 46000, volume: 2800000 },
-  { time: '2025-11-22 09:30', open: 46000, high: 46500, low: 45800, close: 46300, volume: 2200000 },
-  { time: '2025-11-22 09:45', open: 46300, high: 46800, low: 46100, close: 46500, volume: 3400000 },
-  { time: '2025-11-22 10:00', open: 46500, high: 47200, low: 46400, close: 47000, volume: 2900000 },
-  { time: '2025-11-22 10:15', open: 47000, high: 47500, low: 46900, close: 47300, volume: 3800000 },
-  { time: '2025-11-22 10:30', open: 47300, high: 47800, low: 47100, close: 47600, volume: 3200000 },
-  { time: '2025-11-22 10:45', open: 47600, high: 48200, low: 47500, close: 48000, volume: 4200000 },
-  { time: '2025-11-22 11:00', open: 48000, high: 48500, low: 47800, close: 48300, volume: 3900000 },
-  { time: '2025-11-22 11:15', open: 48300, high: 48800, low: 48100, close: 48500, volume: 4100000 },
-  { time: '2025-11-22 11:30', open: 48500, high: 49000, low: 48200, close: 48700, volume: 3500000 },
-  { time: '2025-11-22 11:45', open: 48700, high: 49200, low: 48500, close: 48900, volume: 3200000 },
-  { time: '2025-11-22 12:00', open: 48900, high: 49500, low: 48800, close: 49300, volume: 4500000 },
-  { time: '2025-11-22 12:15', open: 49300, high: 49800, low: 49100, close: 49600, volume: 3800000 },
-  { time: '2025-11-22 12:30', open: 49600, high: 50200, low: 49400, close: 49800, volume: 4200000 },
-  { time: '2025-11-22 12:45', open: 49800, high: 50500, low: 49600, close: 50200, volume: 4600000 },
-  { time: '2025-11-22 13:00', open: 50200, high: 50800, low: 50000, close: 50500, volume: 5200000 },
-  { time: '2025-11-22 13:15', open: 50500, high: 51200, low: 50300, close: 50900, volume: 5800000 },
-  { time: '2025-11-22 13:30', open: 50900, high: 51500, low: 50700, close: 51200, volume: 6200000 },
-  { time: '2025-11-22 13:45', open: 51200, high: 51800, low: 51000, close: 51500, volume: 5900000 },
-  { time: '2025-11-22 14:00', open: 51500, high: 52000, low: 51300, close: 51700, volume: 6100000 },
-  { time: '2025-11-22 14:15', open: 51700, high: 52200, low: 51500, close: 51900, volume: 5400000 },
-  { time: '2025-11-22 14:30', open: 51900, high: 52500, low: 51700, close: 52200, volume: 6500000 },
-  { time: '2025-11-22 14:45', open: 52200, high: 52800, low: 52000, close: 52500, volume: 7200000 },
-  { time: '2025-11-22 15:00', open: 52500, high: 53200, low: 52300, close: 52900, volume: 8100000 },
-  { time: '2025-11-22 15:15', open: 52900, high: 53500, low: 52700, close: 53200, volume: 7800000 },
-  { time: '2025-11-22 15:30', open: 53200, high: 53800, low: 53000, close: 53500, volume: 7500000 },
-  { time: '2025-11-22 15:45', open: 53500, high: 54200, low: 53300, close: 53900, volume: 8200000 },
-  { time: '2025-11-22 16:00', open: 53900, high: 54500, low: 53700, close: 54200, volume: 8900000 },
-  { time: '2025-11-22 16:15', open: 54200, high: 53800, low: 52500, close: 53000, volume: 9500000 },
-  { time: '2025-11-22 16:30', open: 53000, high: 53300, low: 52200, close: 52500, volume: 8800000 },
-  { time: '2025-11-22 16:45', open: 52500, high: 52800, low: 51800, close: 52000, volume: 8200000 },
-  { time: '2025-11-22 17:00', open: 52000, high: 52300, low: 51500, close: 51800, volume: 7500000 },
-  { time: '2025-11-22 17:15', open: 51800, high: 52100, low: 51200, close: 51500, volume: 6900000 },
-  { time: '2025-11-22 17:30', open: 51500, high: 51800, low: 51000, close: 51300, volume: 6200000 },
-  { time: '2025-11-22 17:45', open: 51300, high: 51600, low: 50800, close: 51100, volume: 5800000 },
-  { time: '2025-11-22 18:00', open: 51100, high: 51400, low: 50600, close: 50900, volume: 5200000 },
+// The Lightweight Charts library is not available via standard import,
+// so we assume it is loaded globally via CDN in the hosting HTML.
+// We must declare the types for the global object 'LightweightCharts'
+// so the TypeScript compiler doesn't throw errors.
+declare const LightweightCharts: {
+  createChart: (container: HTMLElement, options: any) => any;
+  ColorType: { Solid: 'solid' };
+};
+
+// --- Type Definitions ---
+export interface CandleData {
+  time: string; // "YYYY-MM-DD HH:MM:SS"
+  open: number;
+  high: number;
+  low: number;
+  close: number;
+  volume: number;
+}
+
+export interface TradeLogEntry {
+  id: number;
+  type: 'buy' | 'sell';
+  price: number;
+  amount: number;
+  time: string;
+  symbol: string;
+  note?: string; // Added to clarify order type (Execution, TP, SL)
+}
+
+// Available trading pairs
+const AVAILABLE_PAIRS = [
+  { symbol: "BTCUSDT", label: "BTC/USDT" },
+  { symbol: "ETHUSDT", label: "ETH/USDT" },
+  { symbol: "SOLUSDT", label: "SOL/USDT" },
+  { symbol: "BNBUSDT", label: "BNB/USDT" },
+  { symbol: "ADAUSDT", label: "ADA/USDT" },
+  { symbol: "XRPUSDT", label: "XRP/USDT" },
 ];
 
-export function TradePage() {
-  const [orderType, setOrderType] = useState<'market' | 'limit' | 'stop'>('market');
-  const [tradeType, setTradeType] = useState<'buy' | 'sell'>('buy');
+// -------------------------------
+// UTILITIES FOR LIGHTWEIGHT CHARTS
+// -------------------------------
+
+// Helper to convert time string to a timestamp (seconds) suitable for Lightweight Charts
+function toTimestamp(str: string): number {
+  const date = new Date(str.replace(" ", "T"));
+  return Math.floor(date.getTime() / 1000);
+}
+
+// -------------------------------
+// LIGHTWEIGHT CHART COMPONENT
+// -------------------------------
+
+interface ChartProps {
+  data: CandleData[];
+  height?: number;
+}
+
+
+function generateDummyCandles(symbol: string, count: number = 100): CandleData[] {
+  const now = new Date();
+  const candles: CandleData[] = [];
+
+  const startTime = new Date(now.getTime() - count * 60 * 1000);
+
+  const basePrices: Record<string, number> = {
+    BTCUSDT: 86964,
+    ETHUSDT: 2802.31,
+    SOLUSDT: 2802.31,
+    BNBUSDT: 829.45,
+    ADAUSDT: 0.39,
+    XRPUSDT: 0.58,
+  };
+
+  let currentPrice = basePrices[symbol] || 45000;
+
+  for (let i = 0; i < count; i++) {
+    const candleTime = new Date(startTime.getTime() + i * 60 * 1000);
+
+    const variance = 0.002;
+    const pct = (Math.random() - 0.5) * variance;
+    const open = currentPrice;
+    const close = open * (1 + pct);
+
+    const baseHigh = Math.max(open, close);
+    const baseLow = Math.min(open, close);
+
+    const wick = baseHigh * 0.0005;
+    const high = baseHigh + Math.random() * wick;
+    const low = baseLow - Math.random() * wick;
+
+    const volume = Math.floor(5000 + Math.random() * 5000);
+
+    candles.push({
+      time: candleTime.toISOString().split(".")[0].replace("T", " "),
+      open: Number(open.toFixed(2)),
+      high: Number(high.toFixed(2)),
+      low: Number(low.toFixed(2)),
+      close: Number(close.toFixed(2)),
+      volume,
+    });
+
+    currentPrice = close;
+  }
+
+  return candles;
+}
+
+// -------------------------------
+// TICK MAPPING & HELPERS
+// -------------------------------
+function mapTick(tickerData: any) {
+  return {
+    price: parseFloat(tickerData.c ?? tickerData.p ?? 0),
+    volume: parseFloat(tickerData.v ?? 0),
+    ts: tickerData.E ?? Date.now(),
+    symbol: tickerData.s,
+  };
+}
+
+function buildMinute(ts: number) {
+  const t = new Date(ts);
+  t.setSeconds(0, 0); // Important: snap to the minute
+  return t;
+}
+
+// -------------------------------
+// TRADE LOG COMPONENT
+// -------------------------------
+
+interface TradeLogProps {
+    tradeHistory: TradeLogEntry[];
+    selectedPair: string;
+}
+
+function TradeLog({ tradeHistory, selectedPair }: TradeLogProps) {
+    const assetSymbol = selectedPair.replace("USDT", "");
+    
+    // Reverse the array to show most recent trades first
+    const recentTrades = tradeHistory.slice().reverse();
+
+    return (
+        <div className="space-y-4">
+            <h2 className="text-xl font-semibold text-slate-900 dark:text-white flex items-center gap-2 pb-2 border-b border-slate-200 dark:border-slate-700">
+                <Clock className="w-5 h-5 text-blue-500" />
+                Recent Activity
+            </h2>
+            {/* Updated header for 4 columns: Type/Status, Price, Amount */}
+            <div className="grid grid-cols-4 text-xs font-medium text-slate-500 dark:text-slate-400 uppercase border-b border-dashed border-slate-200 dark:border-slate-800 pb-2">
+                <span className="col-span-2">Type / Status</span>
+                <span className="text-center">Price ({selectedPair.substring(selectedPair.length - 4)})</span>
+                <span className="text-right">Amount ({assetSymbol})</span>
+            </div>
+            <div className="space-y-3 max-h-[700px] overflow-y-auto">
+                {recentTrades.length === 0 ? (
+                    <div className="text-center py-8 text-slate-500 dark:text-slate-400 text-sm">
+                        No recent trades. Execute an order to see it here.
+                    </div>
+                ) : (
+                    recentTrades.map(trade => (
+                        <div key={trade.id} className="grid grid-cols-4 text-sm items-center py-1">
+                            {/* Column 1 & 2: Type and Status/Note */}
+                            <div className="col-span-2 flex flex-col">
+                                <span className={`font-semibold ${trade.type === 'buy' ? 'text-green-500' : 'text-red-500'}`}>
+                                    {trade.type.toUpperCase()}
+                                </span>
+                                <span className="text-xs text-slate-400 dark:text-slate-500">
+                                    {trade.note || 'Market Execution'}
+                                </span>
+                            </div>
+                            {/* Column 3: Price */}
+                            <span className="text-slate-900 dark:text-white text-center">
+                                {trade.price.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                            </span>
+                            {/* Column 4: Amount */}
+                            <span className="text-slate-500 dark:text-slate-300 text-right">
+                                {trade.amount.toFixed(4)} {assetSymbol}
+                            </span>
+                        </div>
+                    ))
+                )}
+            </div>
+            <div className="pt-4 border-t border-slate-200 dark:border-slate-700">
+                <p className="text-sm text-center text-slate-500 dark:text-slate-400 flex items-center justify-center gap-1">
+                    <Zap className="w-4 h-4 text-amber-500" />
+                    Simulated market data.
+                </p>
+            </div>
+        </div>
+    );
+}
+
+// -------------------------------
+// MAIN APPLICATION COMPONENT
+// -------------------------------
+function TradePage() {
+  // --- Initialization using a single source of truth ---
+  const INITIAL_PAIR = "BTCUSDT";
+  const initialData = generateDummyCandles(INITIAL_PAIR);
+
+  // --- STATE ---
+  const [selectedPair, setSelectedPair] = useState<string>(INITIAL_PAIR);
+  const [candles, setCandles] = useState<CandleData[]>(initialData);
+  const [currentTickerPrice, setCurrentTickerPrice] = useState<number>(
+    initialData.length > 0 ? initialData[initialData.length - 1].close : 0
+  );
+  // Trade History
+  const [tradeHistory, setTradeHistory] = useState<TradeLogEntry[]>([]);
+  const tradeIdRef = useRef(0);
+
+  // --- REFS ---
+  const wsRef = useRef<WebSocket | null>(null);
+  const selectedPairRef = useRef(selectedPair);
+  const currentCandleRef = useRef<any>(null); // { minute: ms, time: string, ... }
+  // Initialize history ref with the initial data
+  const historyRef = useRef<CandleData[]>([...initialData]);
+
+  // --- ORDER FORM STATE (Only 'market' and 'bracket' remain) ---
+  const [orderType, setOrderType] = useState<"market" | "bracket">("market");
+  const [tradeType, setTradeType] = useState<"buy" | "sell">("buy");
   const [amount, setAmount] = useState(0.5);
-  const [price, setPrice] = useState(47500);
-  const [timeframe, setTimeframe] = useState('1H');
+  // 'price' state is now technically redundant as execution is always at current market price, but we keep it
+  // for TP/SL initialization logic consistency.
+  const [price, setPrice] = useState(currentTickerPrice || 47500); 
+  const [timeframe, setTimeframe] = useState("1m");
   
-  const currentPrice = 49400;
-  const totalValue = amount * (orderType === 'market' ? currentPrice : price);
-  
-  return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div>
-        <h1 className="text-3xl text-slate-900 dark:text-white mb-2">Trade</h1>
-        <p className="text-slate-600 dark:text-slate-400">Execute trades with real-time pricing</p>
-      </div>
+  // STATES for Bracket Order
+  const [takeProfitPrice, setTakeProfitPrice] = useState(0);
+  const [stopLossPrice, setStopLossPrice] = useState(0);
+
+  // Calculate effective price: Market/Bracket ALWAYS use current price
+  const effectivePrice = currentTickerPrice;
+  const totalValue = amount * (effectivePrice || 0);
+
+  // Update TP/SL price state when the current market price changes or order type/trade type switches
+  useEffect(() => {
+    if (currentTickerPrice > 0 && orderType === "bracket") {
       
-      <div className="grid lg:grid-cols-3 gap-6">
-        {/* Trading Panel */}
-        <div className="lg:col-span-2 space-y-6">
-          {/* Chart Section */}
-          <div className="p-6 rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
-            {/* Chart Header */}
-            <div className="flex items-center justify-between mb-6">
-              <div className="flex items-center gap-6">
-                <div>
-                  <h2 className="text-2xl text-slate-900 dark:text-white mb-1">BTC/USD</h2>
-                  <div className="flex items-center gap-4">
-                    <span className="text-3xl text-slate-900 dark:text-white">${currentPrice.toLocaleString()}</span>
-                    <span className="flex items-center gap-1 text-green-500">
-                      <TrendingUp className="w-5 h-5" />
-                      +7.0%
-                    </span>
+      // Example: TP/SL 0.5% away (A reasonable starting point for BTC/ETH)
+      const deviation = currentTickerPrice * 0.005;
+      
+      let newTP: number, newSL: number;
+
+      if (tradeType === "buy") {
+          newTP = currentTickerPrice + deviation;
+          newSL = currentTickerPrice - deviation;
+      } else { // sell (short)
+          newTP = currentTickerPrice - deviation;
+          newSL = currentTickerPrice + deviation;
+      }
+
+      // Only update if the current values are close to 0 or far from the calculated deviation, 
+      // preventing resets when users are actively setting them.
+      const isTPDefault = takeProfitPrice === 0 || Math.abs(takeProfitPrice - newTP) < 10;
+      const isSLDefault = stopLossPrice === 0 || Math.abs(stopLossPrice - newSL) < 10;
+
+      if (isTPDefault) setTakeProfitPrice(newTP);
+      if (isSLDefault) setStopLossPrice(newSL);
+    }
+  }, [currentTickerPrice, orderType, tradeType, takeProfitPrice, stopLossPrice]);
+
+
+  // Handler to log a trade
+  const handleTrade = useCallback(() => {
+    // Basic validation
+    if (amount <= 0 || effectivePrice <= 0) {
+        console.error("Invalid trade amount or price.");
+        return;
+    }
+    
+    if (orderType === 'bracket') {
+        // Bracket specific validation
+        const tpInvalid = tradeType === 'buy' 
+            ? takeProfitPrice <= effectivePrice 
+            : takeProfitPrice >= effectivePrice;
+        
+        const slInvalid = tradeType === 'buy'
+            ? stopLossPrice >= effectivePrice 
+            : stopLossPrice <= effectivePrice;
+
+        if (tpInvalid || slInvalid || takeProfitPrice <= 0 || stopLossPrice <= 0) {
+            console.error("Bracket order prices are invalid. TP must be higher/lower than entry, SL must be lower/higher than entry.");
+            // In a real app, you would show a modal/error message here instead of just logging.
+            return; 
+        }
+    }
+
+    const tradeEntries: TradeLogEntry[] = [];
+    const executionTime = new Date().toLocaleTimeString('en-US', { hour12: false });
+    const opposingType = tradeType === 'buy' ? 'sell' : 'buy';
+
+    // 1. Log the main trade execution
+    tradeIdRef.current += 1;
+    tradeEntries.push({
+        id: tradeIdRef.current,
+        type: tradeType, // 'buy' or 'sell'
+        price: effectivePrice,
+        amount: amount,
+        time: executionTime,
+        symbol: selectedPair,
+        note: orderType === 'bracket' ? 'Bracket Entry' : 'Market Execution',
+    });
+
+    // 2. Log TP/SL orders if it's a BRACKET order
+    if (orderType === 'bracket') {
+        
+        // Take Profit (TP) Order (Opposite trade, placed as a Limit Order)
+        tradeIdRef.current += 1;
+        tradeEntries.push({
+            id: tradeIdRef.current,
+            type: opposingType,
+            price: takeProfitPrice,
+            amount: amount,
+            time: executionTime,
+            symbol: selectedPair,
+            note: 'Take Profit (Limit)', 
+        });
+
+        // Stop Loss (SL) Order (Opposite trade, placed as a Stop Order)
+        tradeIdRef.current += 1;
+        tradeEntries.push({
+            id: tradeIdRef.current,
+            type: opposingType,
+            price: stopLossPrice,
+            amount: amount,
+            time: executionTime,
+            symbol: selectedPair,
+            note: 'Stop Loss (Stop)', 
+        });
+    }
+
+    setTradeHistory(prev => [
+        ...prev,
+        ...tradeEntries // Append all generated entries
+    ]);
+    
+    // Log for console
+    console.log(`Executed ${tradeType.toUpperCase()} order for ${amount} ${selectedPair.replace("USDT", "")} at $${effectivePrice.toFixed(2)}`);
+    if (orderType === 'bracket') {
+         console.log(`Placed TP at ${takeProfitPrice.toFixed(2)} and SL at ${stopLossPrice.toFixed(2)}`);
+    }
+
+  }, [amount, effectivePrice, tradeType, selectedPair, orderType, takeProfitPrice, stopLossPrice]);
+
+
+  // ----------------------------------------------------
+  // HANDLE PAIR CHANGE (RESET WITH FRESH DUMMY DATA)
+  // ----------------------------------------------------
+  useEffect(() => {
+    selectedPairRef.current = selectedPair;
+
+    const freshDummyData = generateDummyCandles(selectedPair);
+
+    // CRITICAL FIX: Reset all data related state and refs simultaneously
+    setCandles(freshDummyData);
+    historyRef.current = [...freshDummyData]; // Update the mutable ref
+    currentCandleRef.current = null; // Clear the current candle
+    
+    const newPrice = freshDummyData.length > 0 ? freshDummyData[freshDummyData.length - 1].close : 0;
+    setCurrentTickerPrice(newPrice);
+    // Reset the price state (used for TP/SL initialization)
+    setPrice(newPrice); 
+  }, [selectedPair]);
+
+
+  // PROCESS TICK -> build/append 1-minute candle
+  function processTick(tick: { price: number; volume: number; ts: number }) {
+    const minute = buildMinute(tick.ts);
+    const minuteKey = minute.getTime();
+
+    let candle = currentCandleRef.current;
+
+    // NEW CANDLE STARTING
+    if (!candle || candle.minute !== minuteKey) {
+      // finalize previous candle (if exists)
+      if (candle) {
+        // push finalized candle (strip minute field, rely on fixed numbers)
+        const finalized: CandleData = {
+          time: new Date(candle.minute).toISOString().split(".")[0].replace("T", " "),
+          open: Number(candle.open),
+          high: Number(candle.high),
+          low: Number(candle.low),
+          close: Number(candle.close),
+          volume: Math.floor(candle.volume),
+        };
+
+        historyRef.current.push(finalized);
+
+        // cap history
+        if (historyRef.current.length > 500) {
+          historyRef.current = historyRef.current.slice(-500);
+        }
+      }
+
+      // start new current candle
+      currentCandleRef.current = {
+        minute: minuteKey,
+        time: minute.toISOString().split(".")[0].replace("T", " "),
+        open: tick.price,
+        high: tick.price,
+        low: tick.price,
+        close: tick.price,
+        volume: tick.volume,
+      };
+    } else {
+      // UPDATE EXISTING CURRENT CANDLE
+      candle.high = Math.max(candle.high, tick.price);
+      candle.low = Math.min(candle.low, tick.price);
+      candle.close = tick.price;
+      candle.volume += tick.volume;
+    }
+
+    // SIMPLIFIED STATE UPDATE: Set state with history + current candle.
+    setCandles([...historyRef.current, { ...currentCandleRef.current }]);
+  }
+
+  // WEBSOCKET (Kept for structure, relies on external service)
+  useEffect(() => {
+    const ws = new WebSocket("ws://localhost:5076");
+    wsRef.current = ws;
+
+    ws.onopen = () => {
+      console.log("WS Connected");
+      ws.send(JSON.stringify({ type: "join" }));
+    };
+
+    ws.onmessage = (msg) => {
+      try {
+        const parsedMsg = JSON.parse(msg.data);
+        if (!parsedMsg.data || !parsedMsg.data.s) return;
+
+        if (parsedMsg.data.s !== selectedPairRef.current) {
+          return;
+        }
+
+        const tick = mapTick(parsedMsg.data);
+        if (!tick.price) return;
+
+        setCurrentTickerPrice(tick.price);
+        processTick(tick);
+      } catch (err) {
+        console.error("WS Error parsing:", err);
+      }
+    };
+
+    ws.onerror = (err) => console.error("WS Error:", err);
+    ws.onclose = () => console.log("WS closed");
+
+    return () => {
+      try {
+        if (ws && ws.readyState === WebSocket.OPEN) ws.close();
+      } catch {}
+    };
+  }, []);
+
+  const selectedPairLabel =
+    AVAILABLE_PAIRS.find((p) => p.symbol === selectedPair)?.label || selectedPair;
+  
+  const assetSymbol = selectedPair.replace("USDT", "");
+
+
+  return (
+    // We add the CDN script tag here to load lightweight-charts globally
+    // for the TradingViewChart component to use.
+    <>
+      <script
+        src="https://unpkg.com/lightweight-charts/dist/lightweight-charts.standalone.production.js"
+        type="text/javascript"
+      ></script>
+      <div className="min-h-screen bg-slate-50 dark:bg-slate-900 p-6 font-sans">
+        <div className="max-w-7xl mx-auto space-y-6">
+          {/* Page Header */}
+          <div>
+            <h1 className="text-3xl font-bold text-slate-900 dark:text-white mb-2">
+              Trade Execution
+            </h1>
+            <p className="text-slate-600 dark:text-slate-400">
+              Execute trades using Market or Bracket orders
+            </p>
+          </div>
+
+          <div className="grid lg:grid-cols-3 gap-6">
+            {/* Main Chart Section */}
+            <div className="lg:col-span-2 space-y-6">
+              <div className="p-6 rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
+                {/* Header with Select and Price */}
+                <div className="flex items-center justify-between mb-6">
+                  <div>
+                    <select
+                      value={selectedPair}
+                      onChange={(e) => setSelectedPair(e.target.value)}
+                      className="text-2xl  font-bold bg-transparent text-slate-900 dark:text-white mb-1 border-none focus:ring-0 cursor-pointer outline-none p-0"
+                    >
+                      {AVAILABLE_PAIRS.map((pair) => (
+                        <option className=" dark:bg-slate-800 " key={pair.symbol} value={pair.symbol}>
+                          {pair.label}
+                        </option>
+                      ))}
+                    </select>
+
+                    <div className="flex items-center gap-4">
+                      <span className="text-3xl text-slate-900 dark:text-white min-h-[40px]">
+                        {currentTickerPrice > 0
+                          ? `$${currentTickerPrice.toLocaleString(undefined, { minimumFractionDigits: 2 })}`
+                          : "Loading..."}
+                      </span>
+                      <span className="flex items-center gap-1 text-green-500">
+                        <TrendingUp className="w-5 h-5" />
+                        +7.0%
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-green-500/10 text-green-600 dark:text-green-400 border border-green-500/20">
+                      <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+                      <span className="text-sm">Live</span>
+                    </div>
                   </div>
                 </div>
-              </div>
-              
-              <div className="flex items-center gap-2">
-                <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-green-500/10 text-green-600 dark:text-green-400 border border-green-500/20">
-                  <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-                  <span className="text-sm">Live</span>
+
+                {/* Toolbar */}
+                <div className="flex items-center justify-between mb-4 pb-4 border-b border-slate-200 dark:border-slate-700">
+                  <div className="flex items-center gap-2">
+                    <button className="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-400">
+                      <TrendingUp className="w-4 h-4" />
+                    </button>
+                    <button className="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-400">
+                      <Minus className="w-4 h-4" />
+                    </button>
+                    <button className="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-400">
+                      <Pencil className="w-4 h-4" />
+                    </button>
+                  </div>
+
+                  <div className="flex gap-1 p-1 rounded-xl bg-slate-100 dark:bg-slate-900">
+                    {["1m", "5m", "15m", "1h", "4h", "1D", "1W"].map((tf) => (
+                      <button
+                        key={tf}
+                        onClick={() => setTimeframe(tf)}
+                        className={`px-3 py-1.5 rounded-lg text-sm ${
+                          timeframe === tf
+                            ? "bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm"
+                            : "text-slate-600 dark:text-slate-400"
+                        }`}
+                      >
+                        {tf}
+                      </button>
+                    ))}
+                  </div>
+
+                  <div>
+                    <select className="px-3 py-2 rounded-lg bg-slate-100 dark:bg-slate-900 border-none text-sm text-slate-600 dark:text-slate-400 outline-none">
+                      <option>Candles</option>
+                      <option>Line</option>
+                    </select>
+                  </div>
+                </div>
+
+                {/* Chart */}
+                <div className="min-h-[500px] flex items-center justify-center rounded-xl overflow-hidden">
+                  <TradingViewChart data={candles} />
                 </div>
               </div>
-            </div>
-            
-            {/* Toolbar */}
-            <div className="flex items-center justify-between mb-4 pb-4 border-b border-slate-200 dark:border-slate-700">
-              {/* Drawing Tools */}
-              <div className="flex items-center gap-2">
-                <button className="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-400 transition-colors" title="Trend Line">
-                  <TrendingUpIcon className="w-4 h-4" />
-                </button>
-                <button className="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-400 transition-colors" title="Horizontal Line">
-                  <MinusIcon className="w-4 h-4" />
-                </button>
-                <button className="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-400 transition-colors" title="Draw">
-                  <Pencil className="w-4 h-4" />
-                </button>
-              </div>
-              
-              {/* Timeframe Selector */}
-              <div className="flex gap-1 p-1 rounded-xl bg-slate-100 dark:bg-slate-900">
-                {['1m', '5m', '15m', '1h', '4h', '1D', '1W'].map(tf => (
+
+              {/* Order Form Section */}
+              <div className="p-6 rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
+                {/* Buy / Sell Toggle */}
+                <div className="flex gap-2 p-1 rounded-xl bg-slate-100 dark:bg-slate-900 mb-6">
                   <button
-                    key={tf}
-                    onClick={() => setTimeframe(tf)}
-                    className={`px-3 py-1.5 rounded-lg text-sm transition-all ${
-                      timeframe === tf
-                        ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm'
-                        : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                    onClick={() => setTradeType("buy")}
+                    className={`flex-1 py-3 rounded-lg transition-colors ${
+                      tradeType === "buy"
+                        ? "bg-green-500 text-white"
+                        : "text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700"
                     }`}
                   >
-                    {tf}
+                    Buy
                   </button>
-                ))}
-              </div>
-              
-              {/* Chart Type */}
-              <div className="flex items-center gap-2">
-                <select className="px-3 py-2 rounded-lg bg-slate-100 dark:bg-slate-900 border-none text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-teal-500">
-                  <option>Candles</option>
-                  <option>Line</option>
-                  <option>Area</option>
-                  <option>Bars</option>
-                </select>
-              </div>
-            </div>
-            
-            {/* TradingView Chart */}
-            <TradingViewChart data={candleData} />
-          </div>
-          
-          {/* Order Form */}
-          <div className="p-6 rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
-            {/* Buy/Sell Toggle */}
-            <div className="flex gap-2 p-1 rounded-xl bg-slate-100 dark:bg-slate-900 mb-6">
-              <button
-                onClick={() => setTradeType('buy')}
-                className={`flex-1 py-3 rounded-lg transition-all ${
-                  tradeType === 'buy'
-                    ? 'bg-green-500 text-white shadow-lg shadow-green-500/25'
-                    : 'text-slate-600 dark:text-slate-400'
-                }`}
-              >
-                Buy
-              </button>
-              <button
-                onClick={() => setTradeType('sell')}
-                className={`flex-1 py-3 rounded-lg transition-all ${
-                  tradeType === 'sell'
-                    ? 'bg-red-500 text-white shadow-lg shadow-red-500/25'
-                    : 'text-slate-600 dark:text-slate-400'
-                }`}
-              >
-                Sell
-              </button>
-            </div>
-            
-            {/* Order Type */}
-            <div className="mb-6">
-              <label className="block text-sm text-slate-600 dark:text-slate-400 mb-3">Order Type</label>
-              <div className="flex gap-2">
+                  <button
+                    onClick={() => setTradeType("sell")}
+                    className={`flex-1 py-3 rounded-lg transition-colors ${
+                      tradeType === "sell"
+                        ? "bg-red-500 text-white"
+                        : "text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700"
+                    }`}
+                  >
+                    Sell
+                  </button>
+                </div>
+
+                {/* Order Type Selection */}
+                <div className="mb-6">
+                  <label className="block text-sm text-slate-600 dark:text-slate-400 mb-3">
+                    Order Type
+                  </label>
+                  <div className="flex gap-2">
+                    {/* Only Market and Bracket are available now */}
+                    {["market", "bracket"].map((type) => (
+                      <button
+                        key={type}
+                        onClick={() => setOrderType(type as any)}
+                        // Harmonized accent color for selected order type
+                        className={`flex-1 px-4 py-3 rounded-xl capitalize transition-all ${
+                          orderType === type
+                            ? "bg-gradient-to-r from-teal-500 to-blue-600 text-white shadow-md shadow-blue-500/30"
+                            : "bg-slate-100 dark:bg-slate-900 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700"
+                        }`}
+                      >
+                        {type.replace('-', ' ')}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Amount Input */}
+                <div className="mb-6">
+                  <div className="flex items-center justify-between mb-3">
+                    <label className="text-sm text-slate-600 dark:text-slate-400">
+                      Amount ({assetSymbol})
+                    </label>
+                    <span className="text-sm text-slate-500">Available: 2.5</span>
+                  </div>
+
+                  <input
+                    type="number"
+                    value={amount}
+                    onChange={(e) => setAmount(parseFloat(e.target.value) || 0)}
+                    // Input focus ring uses blue accent
+                    className="w-full px-4 py-3 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+                  />
+                  <input
+                    type="range"
+                    min={0}
+                    max={2.5}
+                    step={0.01}
+                    value={amount || 0}
+                    onChange={(e) => setAmount(parseFloat(e.target.value))}
+                    className="w-full mt-3 accent-blue-500"
+                  />
+                </div>
+
+                {/* BRACKET ORDER INPUTS - Only visible when orderType is 'bracket' */}
+                {orderType === "bracket" && (
+                  <>
+                    {/* Take Profit Price */}
+                    <div className="mb-4">
+                      <label className="block text-sm text-slate-600 dark:text-slate-400 mb-3">
+                        Take Profit Price ({tradeType === 'buy' ? 'Sell Limit' : 'Buy Limit'}) (USDT)
+                      </label>
+                      <input
+                        type="number"
+                        value={takeProfitPrice.toFixed(2)}
+                        onChange={(e) => setTakeProfitPrice(parseFloat(e.target.value) || 0)}
+                        className="w-full px-4 py-3 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-green-500 outline-none transition-all"
+                      />
+                    </div>
+
+                    {/* Stop Loss Price */}
+                    <div className="mb-6">
+                      <label className="block text-sm text-slate-600 dark:text-slate-400 mb-3">
+                        Stop Loss Price ({tradeType === 'buy' ? 'Sell Stop' : 'Buy Stop'}) (USDT)
+                      </label>
+                      <input
+                        type="number"
+                        value={stopLossPrice.toFixed(2)}
+                        onChange={(e) => setStopLossPrice(parseFloat(e.target.value) || 0)}
+                        className="w-full px-4 py-3 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-red-500 outline-none transition-all"
+                      />
+                    </div>
+                  </>
+                )}
+
+
+                {/* Order Summary */}
+                <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-900 mb-6 border border-slate-200 dark:border-slate-700">
+                  <div className="flex justify-between text-sm mb-2">
+                    <span className="text-slate-500">Order Type</span>
+                    <span className="text-slate-900 dark:text-white capitalize">
+                      {orderType.replace('-', ' ')}
+                    </span>
+                  </div>
+
+                  <div className="flex justify-between text-sm mb-2">
+                    <span className="text-slate-500">Amount</span>
+                    <span className="text-slate-900 dark:text-white">
+                      {amount.toFixed(4)} {assetSymbol}
+                    </span>
+                  </div>
+
+                  <div className="flex justify-between text-sm">
+                    <span className="text-slate-500">Execution Price</span>
+                    <span className="text-slate-900 dark:text-white">
+                      $
+                      {effectivePrice.toLocaleString(undefined, {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2,
+                      })}
+                      {/* Execution is always at market price */}
+                      {" (Market)"}
+                    </span>
+                  </div>
+
+                  {orderType === "bracket" && (
+                    <div className="pt-2 border-t border-slate-200 dark:border-slate-700 mt-2 text-xs">
+                        <div className="flex justify-between text-green-500">
+                            <span>Take Profit (Limit)</span>
+                            <span>${takeProfitPrice.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                        </div>
+                        <div className="flex justify-between text-red-500">
+                            <span>Stop Loss (Stop)</span>
+                            <span>${stopLossPrice.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                        </div>
+                    </div>
+                  )}
+
+                  <div className="pt-3 border-t border-slate-200 dark:border-slate-700 mt-3">
+                    <div className="flex justify-between items-center">
+                      <span className="text-slate-500">Total Estimation</span>
+                      <span className="text-xl font-bold text-slate-900 dark:text-white">
+                        $
+                        {totalValue.toLocaleString(undefined, {
+                          minimumFractionDigits: 2,
+                          maximumFractionDigits: 2,
+                        })}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Submit Button - Calls handleTrade */}
                 <button
-                  onClick={() => setOrderType('market')}
-                  className={`flex-1 px-4 py-3 rounded-xl transition-all ${
-                    orderType === 'market'
-                      ? 'bg-gradient-to-r from-teal-500 to-blue-500 text-white'
-                      : 'bg-slate-100 dark:bg-slate-900 text-slate-600 dark:text-slate-400'
+                  onClick={handleTrade}
+                  className={`w-full py-4 rounded-xl text-white font-bold text-lg transition-all transform active:scale-[0.98] ${
+                    tradeType === "buy"
+                      ? "bg-gradient-to-r from-teal-500 to-blue-600 hover:from-teal-600 hover:to-blue-700 shadow-lg shadow-blue-500/30" // Harmonized gradient
+                      : "bg-red-500 hover:bg-red-600 shadow-lg shadow-red-500/30"
                   }`}
                 >
-                  Market
+                  {tradeType === "buy" ? "Buy" : "Sell"} {selectedPairLabel}
                 </button>
-                <button
-                  onClick={() => setOrderType('limit')}
-                  className={`flex-1 px-4 py-3 rounded-xl transition-all ${
-                    orderType === 'limit'
-                      ? 'bg-gradient-to-r from-teal-500 to-blue-500 text-white'
-                      : 'bg-slate-100 dark:bg-slate-900 text-slate-600 dark:text-slate-400'
-                  }`}
-                >
-                  Limit
-                </button>
-                <button
-                  onClick={() => setOrderType('stop')}
-                  className={`flex-1 px-4 py-3 rounded-xl transition-all ${
-                    orderType === 'stop'
-                      ? 'bg-gradient-to-r from-teal-500 to-blue-500 text-white'
-                      : 'bg-slate-100 dark:bg-slate-900 text-slate-600 dark:text-slate-400'
-                  }`}
-                >
-                  Stop
-                </button>
-              </div>
-            </div>
-            
-            {/* Amount Input */}
-            <div className="mb-6">
-              <div className="flex items-center justify-between mb-3">
-                <label className="text-sm text-slate-600 dark:text-slate-400">Amount (BTC)</label>
-                <span className="text-sm text-slate-600 dark:text-slate-400">
-                  Available: 2.5 BTC
-                </span>
-              </div>
-              <input
-                type="number"
-                value={amount}
-                onChange={(e) => setAmount(parseFloat(e.target.value))}
-                step={0.01}
-                className="w-full px-4 py-3 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:outline-none focus:border-teal-500"
-              />
-              <input
-                type="range"
-                min={0}
-                max={2.5}
-                step={0.01}
-                value={amount}
-                onChange={(e) => setAmount(parseFloat(e.target.value))}
-                className="w-full mt-3"
-              />
-              <div className="flex justify-between mt-2 text-xs text-slate-600 dark:text-slate-400">
-                <span>0 BTC</span>
-                <span>25%</span>
-                <span>50%</span>
-                <span>75%</span>
-                <span>2.5 BTC</span>
-              </div>
-            </div>
-            
-            {/* Price Input (for Limit/Stop orders) */}
-            {orderType !== 'market' && (
-              <div className="mb-6">
-                <label className="block text-sm text-slate-600 dark:text-slate-400 mb-3">
-                  {orderType === 'limit' ? 'Limit Price' : 'Stop Price'} (USD)
-                </label>
-                <input
-                  type="number"
-                  value={price}
-                  onChange={(e) => setPrice(parseFloat(e.target.value))}
-                  step={100}
-                  className="w-full px-4 py-3 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:outline-none focus:border-teal-500"
-                />
-              </div>
-            )}
-            
-            {/* Order Summary */}
-            <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-900 mb-6 space-y-3">
-              <div className="flex justify-between text-sm">
-                <span className="text-slate-600 dark:text-slate-400">Order Type</span>
-                <span className="text-slate-900 dark:text-white capitalize">{orderType}</span>
-              </div>
-              <div className="flex justify-between text-sm">
-                <span className="text-slate-600 dark:text-slate-400">Amount</span>
-                <span className="text-slate-900 dark:text-white">{amount} BTC</span>
-              </div>
-              <div className="flex justify-between text-sm">
-                <span className="text-slate-600 dark:text-slate-400">Price</span>
-                <span className="text-slate-900 dark:text-white">
-                  ${(orderType === 'market' ? currentPrice : price).toLocaleString()}
-                </span>
-              </div>
-              <div className="pt-3 border-t border-slate-200 dark:border-slate-700">
-                <div className="flex justify-between">
-                  <span className="text-slate-900 dark:text-white">Total</span>
-                  <span className="text-xl text-slate-900 dark:text-white">
-                    ${totalValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+
+                <div className="flex items-center justify-center gap-2 mt-4 text-xs text-slate-500">
+                  <Info className="w-4 h-4" />
+                  <span>
+                    {orderType === 'bracket' 
+                        ? 'Bracket order places one market execution, one limit (TP), and one stop (SL) order.'
+                        : 'Simple market order executes instantly at the current price.'}
                   </span>
                 </div>
               </div>
             </div>
-            
-            {/* Submit Button */}
-            <button 
-              className={`w-full py-4 rounded-xl text-white transition-all ${
-                tradeType === 'buy'
-                  ? 'bg-green-500 hover:bg-green-600 hover:shadow-lg hover:shadow-green-500/25'
-                  : 'bg-red-500 hover:bg-red-600 hover:shadow-lg hover:shadow-red-500/25'
-              }`}
-            >
-              {tradeType === 'buy' ? 'Buy' : 'Sell'} BTC
-            </button>
-            
-            <div className="flex items-center gap-2 mt-4 text-xs text-slate-600 dark:text-slate-400">
-              <Info className="w-4 h-4" />
-              <span>Orders are executed instantly at market price</span>
-            </div>
-          </div>
-        </div>
-        
-        {/* Side Panel */}
-        <div className="space-y-6">
-          {/* Account Info */}
-          <div className="p-6 rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
-            <h3 className="text-lg text-slate-900 dark:text-white mb-4">Account Balance</h3>
-            
-            <div className="space-y-4">
-              <div>
-                <p className="text-sm text-slate-600 dark:text-slate-400 mb-1">Available Cash</p>
-                <p className="text-2xl text-slate-900 dark:text-white">$26,130.50</p>
-              </div>
-              
-              <div className="pt-4 border-t border-slate-200 dark:border-slate-700">
-                <p className="text-sm text-slate-600 dark:text-slate-400 mb-1">BTC Holdings</p>
-                <p className="text-xl text-slate-900 dark:text-white">2.5 BTC</p>
-                <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">≈ $118,750.00</p>
-              </div>
-            </div>
-          </div>
-          
-          {/* Market Stats */}
-          <div className="p-6 rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
-            <h3 className="text-lg text-slate-900 dark:text-white mb-4">Market Stats</h3>
-            
-            <div className="space-y-4">
-              <div className="flex justify-between">
-                <span className="text-sm text-slate-600 dark:text-slate-400">24h High</span>
-                <span className="text-sm text-slate-900 dark:text-white">$48,250</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-sm text-slate-600 dark:text-slate-400">24h Low</span>
-                <span className="text-sm text-slate-900 dark:text-white">$46,100</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-sm text-slate-600 dark:text-slate-400">24h Volume</span>
-                <span className="text-sm text-slate-900 dark:text-white">$28.4B</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-sm text-slate-600 dark:text-slate-400">Market Cap</span>
-                <span className="text-sm text-slate-900 dark:text-white">$930B</span>
-              </div>
-            </div>
-          </div>
-          
-          {/* Risk Warning */}
-          <div className="p-6 rounded-2xl bg-amber-500/10 border border-amber-500/20">
-            <div className="flex gap-3">
-              <Info className="w-5 h-5 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" />
-              <div>
-                <p className="text-sm text-amber-900 dark:text-amber-300 mb-2">Risk Warning</p>
-                <p className="text-xs text-amber-800 dark:text-amber-400">
-                  Trading cryptocurrencies involves substantial risk. Only trade with funds you can afford to lose.
-                </p>
+
+            {/* Side Panel (Right Sidebar) */}
+            <div className="space-y-6">
+              <div className="p-6 rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 h-full">
+                {/* Pass tradeHistory to TradeLog */}
+                <TradeLog tradeHistory={tradeHistory} selectedPair={selectedPair} />
               </div>
             </div>
           </div>
         </div>
       </div>
-    </div>
+    </>
   );
 }
+
+// Make the main component the default export
+export default TradePage;

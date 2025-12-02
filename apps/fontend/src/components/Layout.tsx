@@ -1,5 +1,5 @@
 import React from 'react';
-import { LayoutDashboard, TrendingUp, Wallet, ArrowLeftRight, Sun, Moon, LogOut, Menu, X  ,Home} from 'lucide-react';
+import { LayoutDashboard, TrendingUp, Wallet, ArrowLeftRight, Sun, Moon, LogOut, LogIn, Menu, X  ,Home} from 'lucide-react';
 import { useTheme } from './ThemeProvider';
 import { useNavigate } from 'react-router-dom';
 
@@ -69,10 +69,17 @@ export function Layout({ children, currentPage, onNavigate }: LayoutProps) {
               </button>
               
               <button 
-                onClick={() => onNavigate('login')}
+                onClick={() =>{
+                  if(localStorage.getItem("access_token") === null){
+                    navigate("/login")
+                  }else{
+                    localStorage.removeItem("access_token")
+                    navigate("/")
+                  }
+                }}
                 className="p-3 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors"
               >
-                <LogOut className="w-5 h-5" />
+                { !localStorage.getItem("access_token") ? <LogIn /> : <LogOut /> }
               </button>
             </div>
           </div>

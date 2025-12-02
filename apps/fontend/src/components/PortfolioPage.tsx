@@ -304,7 +304,7 @@ export function PortfolioPage() {
     color: COLORS[index % COLORS.length],
   }));
 
-  const chartData = data?.user_option_trade.map(
+  const chartData = data?.user_option_trade?.map(
     (item: object_Trade, index: number) => ({
       date: index + 1, // or item.time if you have timestamp
       value: item.open, // chart value = open price
@@ -720,7 +720,7 @@ export function PortfolioPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-slate-700/50">
-              {data?.user_option_trade.map((trade: object_Trade, i: number) => (
+              {data?.user_option_trade?.map((trade: object_Trade, i: number) => (
                 <tr
                   key={i}
                   className="hover:bg-slate-50/80 dark:hover:bg-slate-700/30 transition-colors"

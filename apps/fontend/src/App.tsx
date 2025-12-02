@@ -8,7 +8,7 @@ import { AuthPage } from "./components/AuthPage.jsx";
 import { Layout } from "./components/Layout.jsx";
 
 import { PortfolioPage } from "./components/PortfolioPage.jsx";
-import { TradePage } from "./components/TradePage.jsx";
+import TradePage from "./components/TradePage.js";
 
 type Page =
   | "landing"
