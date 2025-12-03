@@ -141,6 +141,9 @@ class web_socket_server {
           }
         });
       });
+      ws.on("error" ,()=>{
+        
+      })
     });
   }
 }

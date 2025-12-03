@@ -1,14 +1,14 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { TrendingUp, Info, Pencil, Minus, Clock, Zap } from "lucide-react";
 import { TradingViewChart } from "./TradingViewChart";
-
+import { api_init } from "./api/auth";
 // The Lightweight Charts library is not available via standard import,
 // so we assume it is loaded globally via CDN in the hosting HTML.
 // We must declare the types for the global object 'LightweightCharts'
 // so the TypeScript compiler doesn't throw errors.
 declare const LightweightCharts: {
   createChart: (container: HTMLElement, options: any) => any;
-  ColorType: { Solid: 'solid' };
+  ColorType: { Solid: "solid" };
 };
 
 // --- Type Definitions ---
@@ -23,7 +23,7 @@ export interface CandleData {
 
 export interface TradeLogEntry {
   id: number;
-  type: 'buy' | 'sell';
+  type: "buy" | "sell";
   price: number;
   amount: number;
   time: string;
@@ -60,8 +60,10 @@ interface ChartProps {
   height?: number;
 }
 
-
-function generateDummyCandles(symbol: string, count: number = 100): CandleData[] {
+function generateDummyCandles(
+  symbol: string,
+  count: number = 100
+): CandleData[] {
   const now = new Date();
   const candles: CandleData[] = [];
 
@@ -133,65 +135,74 @@ function buildMinute(ts: number) {
 // -------------------------------
 
 interface TradeLogProps {
-    tradeHistory: TradeLogEntry[];
-    selectedPair: string;
+  tradeHistory: TradeLogEntry[];
+  selectedPair: string;
 }
 
 function TradeLog({ tradeHistory, selectedPair }: TradeLogProps) {
-    const assetSymbol = selectedPair.replace("USDT", "");
-    
-    // Reverse the array to show most recent trades first
-    const recentTrades = tradeHistory.slice().reverse();
+  const assetSymbol = selectedPair.replace("USDT", "");
 
-    return (
-        <div className="space-y-4">
-            <h2 className="text-xl font-semibold text-slate-900 dark:text-white flex items-center gap-2 pb-2 border-b border-slate-200 dark:border-slate-700">
-                <Clock className="w-5 h-5 text-blue-500" />
-                Recent Activity
-            </h2>
-            {/* Updated header for 4 columns: Type/Status, Price, Amount */}
-            <div className="grid grid-cols-4 text-xs font-medium text-slate-500 dark:text-slate-400 uppercase border-b border-dashed border-slate-200 dark:border-slate-800 pb-2">
-                <span className="col-span-2">Type / Status</span>
-                <span className="text-center">Price ({selectedPair.substring(selectedPair.length - 4)})</span>
-                <span className="text-right">Amount ({assetSymbol})</span>
+  // Reverse the array to show most recent trades first
+  const recentTrades = tradeHistory.slice().reverse();
+
+  return (
+    <div className="space-y-4">
+      <h2 className="text-xl font-semibold text-slate-900 dark:text-white flex items-center gap-2 pb-2 border-b border-slate-200 dark:border-slate-700">
+        <Clock className="w-5 h-5 text-blue-500" />
+        Recent Activity
+      </h2>
+      {/* Updated header for 4 columns: Type/Status, Price, Amount */}
+      <div className="grid grid-cols-4 text-xs font-medium text-slate-500 dark:text-slate-400 uppercase border-b border-dashed border-slate-200 dark:border-slate-800 pb-2">
+        <span className="col-span-2">Type / Status</span>
+        <span className="text-center">
+          Price ({selectedPair.substring(selectedPair.length - 4)})
+        </span>
+        <span className="text-right">Amount ({assetSymbol})</span>
+      </div>
+      <div className="space-y-3 max-h-[700px] overflow-y-auto">
+        {recentTrades.length === 0 ? (
+          <div className="text-center py-8 text-slate-500 dark:text-slate-400 text-sm">
+            No recent trades. Execute an order to see it here.
+          </div>
+        ) : (
+          recentTrades.map((trade) => (
+            <div
+              key={trade.id}
+              className="grid grid-cols-4 text-sm items-center py-1"
+            >
+              {/* Column 1 & 2: Type and Status/Note */}
+              <div className="col-span-2 flex flex-col">
+                <span
+                  className={`font-semibold ${trade.type === "buy" ? "text-green-500" : "text-red-500"}`}
+                >
+                  {trade.type.toUpperCase()}
+                </span>
+                <span className="text-xs text-slate-400 dark:text-slate-500">
+                  {trade.note || "Market Execution"}
+                </span>
+              </div>
+              {/* Column 3: Price */}
+              <span className="text-slate-900 dark:text-white text-center">
+                {trade.price.toLocaleString(undefined, {
+                  minimumFractionDigits: 2,
+                })}
+              </span>
+              {/* Column 4: Amount */}
+              <span className="text-slate-500 dark:text-slate-300 text-right">
+                {trade.amount.toFixed(4)} {assetSymbol}
+              </span>
             </div>
-            <div className="space-y-3 max-h-[700px] overflow-y-auto">
-                {recentTrades.length === 0 ? (
-                    <div className="text-center py-8 text-slate-500 dark:text-slate-400 text-sm">
-                        No recent trades. Execute an order to see it here.
-                    </div>
-                ) : (
-                    recentTrades.map(trade => (
-                        <div key={trade.id} className="grid grid-cols-4 text-sm items-center py-1">
-                            {/* Column 1 & 2: Type and Status/Note */}
-                            <div className="col-span-2 flex flex-col">
-                                <span className={`font-semibold ${trade.type === 'buy' ? 'text-green-500' : 'text-red-500'}`}>
-                                    {trade.type.toUpperCase()}
-                                </span>
-                                <span className="text-xs text-slate-400 dark:text-slate-500">
-                                    {trade.note || 'Market Execution'}
-                                </span>
-                            </div>
-                            {/* Column 3: Price */}
-                            <span className="text-slate-900 dark:text-white text-center">
-                                {trade.price.toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                            </span>
-                            {/* Column 4: Amount */}
-                            <span className="text-slate-500 dark:text-slate-300 text-right">
-                                {trade.amount.toFixed(4)} {assetSymbol}
-                            </span>
-                        </div>
-                    ))
-                )}
-            </div>
-            <div className="pt-4 border-t border-slate-200 dark:border-slate-700">
-                <p className="text-sm text-center text-slate-500 dark:text-slate-400 flex items-center justify-center gap-1">
-                    <Zap className="w-4 h-4 text-amber-500" />
-                    Simulated market data.
-                </p>
-            </div>
-        </div>
-    );
+          ))
+        )}
+      </div>
+      <div className="pt-4 border-t border-slate-200 dark:border-slate-700">
+        <p className="text-sm text-center text-slate-500 dark:text-slate-400 flex items-center justify-center gap-1">
+          <Zap className="w-4 h-4 text-amber-500" />
+          Simulated market data.
+        </p>
+      </div>
+    </div>
+  );
 }
 
 // -------------------------------
@@ -225,9 +236,9 @@ function TradePage() {
   const [amount, setAmount] = useState(0.5);
   // 'price' state is now technically redundant as execution is always at current market price, but we keep it
   // for TP/SL initialization logic consistency.
-  const [price, setPrice] = useState(currentTickerPrice || 47500); 
+  const [price, setPrice] = useState(currentTickerPrice || 47500);
   const [timeframe, setTimeframe] = useState("1m");
-  
+
   // STATES for Bracket Order
   const [takeProfitPrice, setTakeProfitPrice] = useState(0);
   const [stopLossPrice, setStopLossPrice] = useState(0);
@@ -239,113 +250,96 @@ function TradePage() {
   // Update TP/SL price state when the current market price changes or order type/trade type switches
   useEffect(() => {
     if (currentTickerPrice > 0 && orderType === "bracket") {
-      
       // Example: TP/SL 0.5% away (A reasonable starting point for BTC/ETH)
       const deviation = currentTickerPrice * 0.005;
-      
+
       let newTP: number, newSL: number;
 
       if (tradeType === "buy") {
-          newTP = currentTickerPrice + deviation;
-          newSL = currentTickerPrice - deviation;
-      } else { // sell (short)
-          newTP = currentTickerPrice - deviation;
-          newSL = currentTickerPrice + deviation;
+        newTP = currentTickerPrice + deviation;
+        newSL = currentTickerPrice - deviation;
+      } else {
+        // sell (short)
+        newTP = currentTickerPrice - deviation;
+        newSL = currentTickerPrice + deviation;
       }
 
-      // Only update if the current values are close to 0 or far from the calculated deviation, 
+      // Only update if the current values are close to 0 or far from the calculated deviation,
       // preventing resets when users are actively setting them.
-      const isTPDefault = takeProfitPrice === 0 || Math.abs(takeProfitPrice - newTP) < 10;
-      const isSLDefault = stopLossPrice === 0 || Math.abs(stopLossPrice - newSL) < 10;
+      const isTPDefault =
+        takeProfitPrice === 0 || Math.abs(takeProfitPrice - newTP) < 10;
+      const isSLDefault =
+        stopLossPrice === 0 || Math.abs(stopLossPrice - newSL) < 10;
 
       if (isTPDefault) setTakeProfitPrice(newTP);
       if (isSLDefault) setStopLossPrice(newSL);
     }
-  }, [currentTickerPrice, orderType, tradeType, takeProfitPrice, stopLossPrice]);
-
+  }, [
+    currentTickerPrice,
+    orderType,
+    tradeType,
+    takeProfitPrice,
+    stopLossPrice,
+  ]);
 
   // Handler to log a trade
-  const handleTrade = useCallback(() => {
+  const handleTrade = useCallback(async () => {
     // Basic validation
     if (amount <= 0 || effectivePrice <= 0) {
-        console.error("Invalid trade amount or price.");
-        return;
+      console.error("Invalid trade amount or price.");
+      return;
     }
-    
-    if (orderType === 'bracket') {
-        // Bracket specific validation
-        const tpInvalid = tradeType === 'buy' 
-            ? takeProfitPrice <= effectivePrice 
-            : takeProfitPrice >= effectivePrice;
-        
-        const slInvalid = tradeType === 'buy'
-            ? stopLossPrice >= effectivePrice 
-            : stopLossPrice <= effectivePrice;
 
-        if (tpInvalid || slInvalid || takeProfitPrice <= 0 || stopLossPrice <= 0) {
-            console.error("Bracket order prices are invalid. TP must be higher/lower than entry, SL must be lower/higher than entry.");
-            // In a real app, you would show a modal/error message here instead of just logging.
-            return; 
+    switch (orderType) {
+      case "bracket":
+        // console.log(
+        //   amount,
+        //   tradeType,
+        //   assetSymbol,
+        //   stopLossPrice,
+        //   takeProfitPrice
+        // );symbol, quantity, type, take_profit, stop_loss
+
+        const responce = await api_init.post("/api/stop-loss-take-profit",{
+          // @ts-ignore
+          symbol:assetSymbol,
+          quantity:amount,
+          type : tradeType == "buy"?"long":"short",
+          take_profit:takeProfitPrice,
+          stop_loss: stopLossPrice
+        })
+        console.log(responce)
+        break;
+      case "market":
+        if (tradeType == "buy") {
+          const responce = await api_init.post("/api/purchase-new-simple-trade", {
+            // @ts-ignore
+            symbol: assetSymbol,
+            quantity: amount,
+          });
+          console.log(responce)
+        } else if (tradeType == "sell") {
+          const responce = await api_init.post("/api/sell-existing-simple-trade", {
+            // @ts-ignore symbol, quantity
+            symbol: assetSymbol,
+            quantity: amount,
+          });
+          console.log(responce)
         }
-    }
-
-    const tradeEntries: TradeLogEntry[] = [];
-    const executionTime = new Date().toLocaleTimeString('en-US', { hour12: false });
-    const opposingType = tradeType === 'buy' ? 'sell' : 'buy';
-
-    // 1. Log the main trade execution
-    tradeIdRef.current += 1;
-    tradeEntries.push({
-        id: tradeIdRef.current,
-        type: tradeType, // 'buy' or 'sell'
-        price: effectivePrice,
-        amount: amount,
-        time: executionTime,
-        symbol: selectedPair,
-        note: orderType === 'bracket' ? 'Bracket Entry' : 'Market Execution',
-    });
-
-    // 2. Log TP/SL orders if it's a BRACKET order
-    if (orderType === 'bracket') {
         
-        // Take Profit (TP) Order (Opposite trade, placed as a Limit Order)
-        tradeIdRef.current += 1;
-        tradeEntries.push({
-            id: tradeIdRef.current,
-            type: opposingType,
-            price: takeProfitPrice,
-            amount: amount,
-            time: executionTime,
-            symbol: selectedPair,
-            note: 'Take Profit (Limit)', 
-        });
-
-        // Stop Loss (SL) Order (Opposite trade, placed as a Stop Order)
-        tradeIdRef.current += 1;
-        tradeEntries.push({
-            id: tradeIdRef.current,
-            type: opposingType,
-            price: stopLossPrice,
-            amount: amount,
-            time: executionTime,
-            symbol: selectedPair,
-            note: 'Stop Loss (Stop)', 
-        });
+        break;
+      default:
+        break;
     }
-
-    setTradeHistory(prev => [
-        ...prev,
-        ...tradeEntries // Append all generated entries
-    ]);
-    
-    // Log for console
-    console.log(`Executed ${tradeType.toUpperCase()} order for ${amount} ${selectedPair.replace("USDT", "")} at $${effectivePrice.toFixed(2)}`);
-    if (orderType === 'bracket') {
-         console.log(`Placed TP at ${takeProfitPrice.toFixed(2)} and SL at ${stopLossPrice.toFixed(2)}`);
-    }
-
-  }, [amount, effectivePrice, tradeType, selectedPair, orderType, takeProfitPrice, stopLossPrice]);
-
+  }, [
+    amount,
+    effectivePrice,
+    tradeType,
+    selectedPair,
+    orderType,
+    takeProfitPrice,
+    stopLossPrice,
+  ]);
 
   // ----------------------------------------------------
   // HANDLE PAIR CHANGE (RESET WITH FRESH DUMMY DATA)
@@ -359,13 +353,15 @@ function TradePage() {
     setCandles(freshDummyData);
     historyRef.current = [...freshDummyData]; // Update the mutable ref
     currentCandleRef.current = null; // Clear the current candle
-    
-    const newPrice = freshDummyData.length > 0 ? freshDummyData[freshDummyData.length - 1].close : 0;
+
+    const newPrice =
+      freshDummyData.length > 0
+        ? freshDummyData[freshDummyData.length - 1].close
+        : 0;
     setCurrentTickerPrice(newPrice);
     // Reset the price state (used for TP/SL initialization)
-    setPrice(newPrice); 
+    setPrice(newPrice);
   }, [selectedPair]);
-
 
   // PROCESS TICK -> build/append 1-minute candle
   function processTick(tick: { price: number; volume: number; ts: number }) {
@@ -380,7 +376,10 @@ function TradePage() {
       if (candle) {
         // push finalized candle (strip minute field, rely on fixed numbers)
         const finalized: CandleData = {
-          time: new Date(candle.minute).toISOString().split(".")[0].replace("T", " "),
+          time: new Date(candle.minute)
+            .toISOString()
+            .split(".")[0]
+            .replace("T", " "),
           open: Number(candle.open),
           high: Number(candle.high),
           low: Number(candle.low),
@@ -458,10 +457,10 @@ function TradePage() {
   }, []);
 
   const selectedPairLabel =
-    AVAILABLE_PAIRS.find((p) => p.symbol === selectedPair)?.label || selectedPair;
-  
-  const assetSymbol = selectedPair.replace("USDT", "");
+    AVAILABLE_PAIRS.find((p) => p.symbol === selectedPair)?.label ||
+    selectedPair;
 
+  const assetSymbol = selectedPair;
 
   return (
     // We add the CDN script tag here to load lightweight-charts globally
@@ -496,7 +495,11 @@ function TradePage() {
                       className="text-2xl  font-bold bg-transparent text-slate-900 dark:text-white mb-1 border-none focus:ring-0 cursor-pointer outline-none p-0"
                     >
                       {AVAILABLE_PAIRS.map((pair) => (
-                        <option className=" dark:bg-slate-800 " key={pair.symbol} value={pair.symbol}>
+                        <option
+                          className=" dark:bg-slate-800 "
+                          key={pair.symbol}
+                          value={pair.symbol}
+                        >
                           {pair.label}
                         </option>
                       ))}
@@ -611,7 +614,7 @@ function TradePage() {
                             : "bg-slate-100 dark:bg-slate-900 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700"
                         }`}
                       >
-                        {type.replace('-', ' ')}
+                        {type.replace("-", " ")}
                       </button>
                     ))}
                   </div>
@@ -623,7 +626,9 @@ function TradePage() {
                     <label className="text-sm text-slate-600 dark:text-slate-400">
                       Amount ({assetSymbol})
                     </label>
-                    <span className="text-sm text-slate-500">Available: 2.5</span>
+                    <span className="text-sm text-slate-500">
+                      Available: 2.5
+                    </span>
                   </div>
 
                   <input
@@ -650,12 +655,16 @@ function TradePage() {
                     {/* Take Profit Price */}
                     <div className="mb-4">
                       <label className="block text-sm text-slate-600 dark:text-slate-400 mb-3">
-                        Take Profit Price ({tradeType === 'buy' ? 'Sell Limit' : 'Buy Limit'}) (USDT)
+                        Take Profit Price (
+                        {tradeType === "buy" ? "Sell Limit" : "Buy Limit"})
+                        (USDT)
                       </label>
                       <input
                         type="number"
                         value={takeProfitPrice.toFixed(2)}
-                        onChange={(e) => setTakeProfitPrice(parseFloat(e.target.value) || 0)}
+                        onChange={(e) =>
+                          setTakeProfitPrice(parseFloat(e.target.value) || 0)
+                        }
                         className="w-full px-4 py-3 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-green-500 outline-none transition-all"
                       />
                     </div>
@@ -663,25 +672,27 @@ function TradePage() {
                     {/* Stop Loss Price */}
                     <div className="mb-6">
                       <label className="block text-sm text-slate-600 dark:text-slate-400 mb-3">
-                        Stop Loss Price ({tradeType === 'buy' ? 'Sell Stop' : 'Buy Stop'}) (USDT)
+                        Stop Loss Price (
+                        {tradeType === "buy" ? "Sell Stop" : "Buy Stop"}) (USD)
                       </label>
                       <input
                         type="number"
                         value={stopLossPrice.toFixed(2)}
-                        onChange={(e) => setStopLossPrice(parseFloat(e.target.value) || 0)}
+                        onChange={(e) =>
+                          setStopLossPrice(parseFloat(e.target.value) || 0)
+                        }
                         className="w-full px-4 py-3 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-red-500 outline-none transition-all"
                       />
                     </div>
                   </>
                 )}
 
-
                 {/* Order Summary */}
                 <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-900 mb-6 border border-slate-200 dark:border-slate-700">
                   <div className="flex justify-between text-sm mb-2">
                     <span className="text-slate-500">Order Type</span>
                     <span className="text-slate-900 dark:text-white capitalize">
-                      {orderType.replace('-', ' ')}
+                      {orderType.replace("-", " ")}
                     </span>
                   </div>
 
@@ -707,14 +718,24 @@ function TradePage() {
 
                   {orderType === "bracket" && (
                     <div className="pt-2 border-t border-slate-200 dark:border-slate-700 mt-2 text-xs">
-                        <div className="flex justify-between text-green-500">
-                            <span>Take Profit (Limit)</span>
-                            <span>${takeProfitPrice.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
-                        </div>
-                        <div className="flex justify-between text-red-500">
-                            <span>Stop Loss (Stop)</span>
-                            <span>${stopLossPrice.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
-                        </div>
+                      <div className="flex justify-between text-green-500">
+                        <span>Take Profit (Limit)</span>
+                        <span>
+                          $
+                          {takeProfitPrice.toLocaleString(undefined, {
+                            minimumFractionDigits: 2,
+                          })}
+                        </span>
+                      </div>
+                      <div className="flex justify-between text-red-500">
+                        <span>Stop Loss (Stop)</span>
+                        <span>
+                          $
+                          {stopLossPrice.toLocaleString(undefined, {
+                            minimumFractionDigits: 2,
+                          })}
+                        </span>
+                      </div>
                     </div>
                   )}
 
@@ -747,9 +768,9 @@ function TradePage() {
                 <div className="flex items-center justify-center gap-2 mt-4 text-xs text-slate-500">
                   <Info className="w-4 h-4" />
                   <span>
-                    {orderType === 'bracket' 
-                        ? 'Bracket order places one market execution, one limit (TP), and one stop (SL) order.'
-                        : 'Simple market order executes instantly at the current price.'}
+                    {orderType === "bracket"
+                      ? "Bracket order places one market execution, one limit (TP), and one stop (SL) order."
+                      : "Simple market order executes instantly at the current price."}
                   </span>
                 </div>
               </div>
@@ -759,7 +780,10 @@ function TradePage() {
             <div className="space-y-6">
               <div className="p-6 rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 h-full">
                 {/* Pass tradeHistory to TradeLog */}
-                <TradeLog tradeHistory={tradeHistory} selectedPair={selectedPair} />
+                <TradeLog
+                  tradeHistory={tradeHistory}
+                  selectedPair={selectedPair}
+                />
               </div>
             </div>
           </div>

@@ -199,6 +199,7 @@ class kafka_instance {
 
       ws.on("close", () => {
         this.users = this.users.filter((user) => user.ws !== ws);
+        
       });
     });
   }
