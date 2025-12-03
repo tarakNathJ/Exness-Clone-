@@ -22,14 +22,21 @@ export interface CandleData {
 }
 
 export interface TradeLogEntry {
-  id: number;
-  type: "buy" | "sell";
-  price: number;
-  amount: number;
-  time: string;
-  symbol: string;
-  note?: string; // Added to clarify order type (Execution, TP, SL)
+  id?: number;
+  type?: "buy" | "sell";
+  price?: number;
+  amount?: number;
+  time?: string;
+  symbol?: string;
+  current_price?: number;
+  message?:string
+   // Added to clarify order type (Execution, TP, SL)
 }
+            // <strong>Symbol:</strong> {t.symbol} <br />
+            // <strong>Price:</strong> {t.current_price} <br />
+            // <strong>Status:</strong> {t.message} <br />
+            // <strong>Trade ID:</strong> {t.id}
+
 
 // Available trading pairs
 const AVAILABLE_PAIRS = [
@@ -135,76 +142,107 @@ function buildMinute(ts: number) {
 // -------------------------------
 
 interface TradeLogProps {
-  tradeHistory: TradeLogEntry[];
+  activity: TradeLogEntry[];
   selectedPair: string;
 }
 
-function TradeLog({ tradeHistory, selectedPair }: TradeLogProps) {
+function TradeLog({ activity, selectedPair }: TradeLogProps) {
   const assetSymbol = selectedPair.replace("USDT", "");
+  const [trades, setTrades] = useState(activity); // manage local state
+  
+
+  // onCancel function to delete a trade
+  const onCancel = (tradeId: number) => {
+    setTrades((prevTrades) => prevTrades.filter((t) => t.id !== tradeId));
+  };
 
   // Reverse the array to show most recent trades first
-  const recentTrades = tradeHistory.slice().reverse();
+  // const recentTrades = activity.slice().reverse();
+  const  cancel_tread= async(id:number)=>{
+    try {
+      const responce = await api_init.post("/api/cancel_tread",{id:id});
+      if(responce.data.success){
+        onCancel(id)
+
+      }
+    } catch (error:any) {
+      console.log(error.message)
+    }
+  }
 
   return (
-    <div className="space-y-4">
-      <h2 className="text-xl font-semibold text-slate-900 dark:text-white flex items-center gap-2 pb-2 border-b border-slate-200 dark:border-slate-700">
-        <Clock className="w-5 h-5 text-blue-500" />
-        Recent Activity
-      </h2>
-      {/* Updated header for 4 columns: Type/Status, Price, Amount */}
-      <div className="grid grid-cols-4 text-xs font-medium text-slate-500 dark:text-slate-400 uppercase border-b border-dashed border-slate-200 dark:border-slate-800 pb-2">
-        <span className="col-span-2">Type / Status</span>
-        <span className="text-center">
-          Price ({selectedPair.substring(selectedPair.length - 4)})
-        </span>
-        <span className="text-right">Amount ({assetSymbol})</span>
-      </div>
-      <div className="space-y-3 max-h-[700px] overflow-y-auto">
-        {recentTrades.length === 0 ? (
-          <div className="text-center py-8 text-slate-500 dark:text-slate-400 text-sm">
-            No recent trades. Execute an order to see it here.
-          </div>
-        ) : (
-          recentTrades.map((trade) => (
-            <div
-              key={trade.id}
-              className="grid grid-cols-4 text-sm items-center py-1"
-            >
-              {/* Column 1 & 2: Type and Status/Note */}
-              <div className="col-span-2 flex flex-col">
-                <span
-                  className={`font-semibold ${trade.type === "buy" ? "text-green-500" : "text-red-500"}`}
-                >
-                  {trade.type.toUpperCase()}
-                </span>
-                <span className="text-xs text-slate-400 dark:text-slate-500">
-                  {trade.note || "Market Execution"}
-                </span>
-              </div>
-              {/* Column 3: Price */}
-              <span className="text-slate-900 dark:text-white text-center">
-                {trade.price.toLocaleString(undefined, {
-                  minimumFractionDigits: 2,
-                })}
-              </span>
-              {/* Column 4: Amount */}
-              <span className="text-slate-500 dark:text-slate-300 text-right">
-                {trade.amount.toFixed(4)} {assetSymbol}
-              </span>
-            </div>
-          ))
-        )}
-      </div>
-      <div className="pt-4 border-t border-slate-200 dark:border-slate-700">
-        <p className="text-sm text-center text-slate-500 dark:text-slate-400 flex items-center justify-center gap-1">
-          <Zap className="w-4 h-4 text-amber-500" />
-          Simulated market data.
+<div className="space-y-4">
+  <h2 className="text-xl font-semibold text-white flex items-center gap-2 pb-2 border-b border-gray-700">
+    <Clock className="w-5 h-5 text-blue-400" />
+    Recent Activity
+  </h2>
+
+  <div className="space-y-3 max-h-[700px] overflow-y-auto">
+    {activity.length === 0 && (
+      <p className="text-sm text-gray-400 text-center py-4">No active trades</p>
+    )}
+
+    {activity.map((t) => (
+      <div
+        key={t.id}
+        className="p-4 rounded-lg border border-gray-700 bg-gray-800 text-white shadow-sm"
+      >
+        <p>
+          <span className="font-semibold text-gray-300">Symbol:</span>{" "}
+          <span className="text-white">{t.symbol}</span>
         </p>
-      </div>
-    </div>
+        <p>
+          <span className="font-semibold text-gray-300">Price:</span>{" "}
+          <span className="text-green-400">{t.current_price}</span>
+        </p>
+        <p>
+          <span className="font-semibold text-gray-300">Trade ID:</span>{" "}
+          <span className="text-gray-200">{t.id}</span>
+        </p>
+
+
+
+
+
+        {t.message && (
+              <p>
+                <span className="font-semibold text-gray-300">Status:</span>{" "}
+                <span className="text-yellow-400">{t.message}</span>
+              </p>
+            )}
+
+            {/* Cancel button */}
+            <button
+              onClick={() => cancel_tread(t.id!) }
+              className="mt-2 px-3 py-1 text-sm bg-red-600 hover:bg-red-700 rounded text-white self-start"
+            >
+              Cancel
+            </button>
+          </div>
+        ))}
+      
+    
+  </div>
+
+  <div className="pt-4 border-t border-gray-700">
+    <p className="text-sm text-center text-gray-400 flex items-center justify-center gap-1">
+      <Zap className="w-4 h-4 text-amber-400" />
+      Simulated market data.
+    </p>
+  </div>
+</div>
+
   );
 }
 
+interface TradeData {
+  id: number; // trade ID from backend
+  symbol: string;
+  current_price: number;
+  message: string; // "trade hold", "trade close", etc.
+  user_id: string;
+  updatedAt: number; // timestamp for auto-delete
+}
 // -------------------------------
 // MAIN APPLICATION COMPONENT
 // -------------------------------
@@ -225,7 +263,7 @@ function TradePage() {
 
   // --- REFS ---
   const wsRef = useRef<WebSocket | null>(null);
-  const socketRef = useRef<WebSocket | null> (null)
+  const socketRef = useRef<WebSocket | null>(null);
   const selectedPairRef = useRef(selectedPair);
   const currentCandleRef = useRef<any>(null); // { minute: ms, time: string, ... }
   // Initialize history ref with the initial data
@@ -248,6 +286,7 @@ function TradePage() {
   const effectivePrice = currentTickerPrice;
   const totalValue = amount * (effectivePrice || 0);
 
+  const [activity, setActivity] = useState<TradeData[]>([]);
   // Update TP/SL price state when the current market price changes or order type/trade type switches
   useEffect(() => {
     if (currentTickerPrice > 0 && orderType === "bracket") {
@@ -301,33 +340,39 @@ function TradePage() {
         //   takeProfitPrice
         // );symbol, quantity, type, take_profit, stop_loss
 
-        const responce = await api_init.post("/api/stop-loss-take-profit",{
+        const responce = await api_init.post("/api/stop-loss-take-profit", {
           // @ts-ignore
-          symbol:assetSymbol,
-          quantity:amount,
-          type : tradeType == "buy"?"long":"short",
-          take_profit:takeProfitPrice,
-          stop_loss: stopLossPrice
-        })
-        console.log(responce)
+          symbol: assetSymbol,
+          quantity: amount,
+          type: tradeType == "buy" ? "long" : "short",
+          take_profit: takeProfitPrice,
+          stop_loss: stopLossPrice,
+        });
+        console.log(responce);
         break;
       case "market":
         if (tradeType == "buy") {
-          const responce = await api_init.post("/api/purchase-new-simple-trade", {
-            // @ts-ignore
-            symbol: assetSymbol,
-            quantity: amount,
-          });
-          console.log(responce)
+          const responce = await api_init.post(
+            "/api/purchase-new-simple-trade",
+            {
+              // @ts-ignore
+              symbol: assetSymbol,
+              quantity: amount,
+            }
+          );
+          console.log(responce);
         } else if (tradeType == "sell") {
-          const responce = await api_init.post("/api/sell-existing-simple-trade", {
-            // @ts-ignore symbol, quantity
-            symbol: assetSymbol,
-            quantity: amount,
-          });
-          console.log(responce)
+          const responce = await api_init.post(
+            "/api/sell-existing-simple-trade",
+            {
+              // @ts-ignore symbol, quantity
+              symbol: assetSymbol,
+              quantity: amount,
+            }
+          );
+          console.log(responce);
         }
-        
+
         break;
       default:
         break;
@@ -421,21 +466,23 @@ function TradePage() {
   // WEBSOCKET (Kept for structure, relies on external service)
   useEffect(() => {
     const ws = new WebSocket(`${import.meta.env.VITE_API_URI_PUBLISH}`);
-    const socket = new WebSocket(`${import.meta.env.VITE_API_URL}`)
+    const socket = new WebSocket(`${import.meta.env.VITE_API_URL}`);
     wsRef.current = ws;
     socketRef.current = socket;
 
-    socket.onopen =()=>{
+    socket.onopen = () => {
       console.log("socket connect");
       const email = localStorage.getItem("email");
-      if ( email ==null) return ;
-      socket.send(JSON.stringify({
-        type:"join",
-        payload:{
-          email:email
-        }
-      }))
-    }
+      if (email == null) return;
+      socket.send(
+        JSON.stringify({
+          type: "join",
+          payload: {
+            email: email,
+          },
+        })
+      );
+    };
 
     ws.onopen = () => {
       console.log("WS Connected");
@@ -461,14 +508,44 @@ function TradePage() {
       }
     };
 
-    socket.onmessage = (msg)=>{
+    socket.onmessage = (msg) => {
       try {
         const parsedMsg = JSON.parse(msg.data);
-        console.log(parsedMsg)
-      } catch (error:any) {
+
+        if (parsedMsg.type !== "tread_status") return;
+        const trade = parsedMsg.data;
+        if (!trade?.id) return;
+
+        setActivity((prev) => {
+          const exists = prev.find((t) => t.id === trade.id);
+
+          if (exists) {
+            // Update existing entry timestamp
+            return prev.map((t) =>
+              t.id === trade.id
+                ? {
+                    ...t,
+                    ...trade,
+                    updatedAt: Date.now(),
+                  }
+                : t
+            );
+          }
+
+          // Add new entry
+          return [
+            ...prev,
+            {
+              ...trade,
+              updatedAt: Date.now(),
+            },
+          ];
+        });
+        // console.log(parsedMsg);
+      } catch (error: any) {
         console.error(" socket Error parsing:", error);
       }
-    }
+    };
 
     ws.onerror = (err) => console.error("WS Error:", err);
     ws.onclose = () => console.log("WS closed");
@@ -807,8 +884,9 @@ function TradePage() {
               <div className="p-6 rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 h-full">
                 {/* Pass tradeHistory to TradeLog */}
                 <TradeLog
-                  tradeHistory={tradeHistory}
+                  activity={activity}
                   selectedPair={selectedPair}
+                  
                 />
               </div>
             </div>
