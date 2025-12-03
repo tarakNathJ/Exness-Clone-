@@ -442,23 +442,31 @@ export const get_user_balance = async_handler(async (req, res) => {
       quantity: tread.quantity,
     })
     .from(tread)
-    .where(eq(tread.user_id, user_id));
+    .where(eq(tread.user_id, user_id))
+    .limit(20)
+    .orderBy(desc(tread.created_at));
   const user_option_trade = await db
     .select({
       open: options_tread.open_price,
       close: options_tread.close_price,
       symbol: options_tread.symbol,
-      qty:options_tread.quantity,
-      type:options_tread.tread_type,
-      date:options_tread.created_at
+      qty: options_tread.quantity,
+      type: options_tread.tread_type,
+      date: options_tread.created_at,
     })
     .from(options_tread)
-    .where(eq(options_tread.user_id, user_id));
-  if (!user_balance ||! user_normal_trade || !user_option_trade) {
+    .where(eq(options_tread.user_id, user_id))
+    .limit(20)
+    .orderBy(desc(options_tread.created_at));
+  if (!user_balance || !user_normal_trade || !user_option_trade) {
     throw new api_error(400, "balance not found");
   }
 
-  return new api_responce(200, "user balance", {user_balance ,user_normal_trade,user_option_trade}).send(res);
+  return new api_responce(200, "user balance", {
+    user_balance,
+    user_normal_trade,
+    user_option_trade,
+  }).send(res);
 });
 
 // get user all tread

@@ -125,7 +125,7 @@ class kafka_instance {
           let data: any;
           try {
             data = JSON.parse(message.value!.toString()) || {};
-            
+            console.log(data);
           } catch (error: any) {
             console.log("samthing want wrong", error.message);
             return;
@@ -135,6 +135,7 @@ class kafka_instance {
             const user_data = this.users.find(
               (us) => us.id === data.data.user_id
             );
+            
             user_data?.ws.send(JSON.stringify(data));
           } catch (error: any) {
             console.log(error.message);
@@ -171,6 +172,8 @@ class kafka_instance {
         try {
           switch (data.type) {
             case "join":
+              if (!data.payload.email) return;
+
               const [result] = await db
                 .select({ u_id: user_unique_id.unique_id })
                 .from(user_unique_id)
@@ -185,8 +188,13 @@ class kafka_instance {
                 id: result?.u_id,
                 ws: ws,
               });
-
-              ws.send("Joined successfully");
+              console.log("Joined successfully");
+              ws.send(
+                JSON.stringify({
+                  type: "join_success",
+                  message: "Joined successfully",
+                })
+              );
               break;
 
             default:
@@ -199,7 +207,6 @@ class kafka_instance {
 
       ws.on("close", () => {
         this.users = this.users.filter((user) => user.ws !== ws);
-        
       });
     });
   }

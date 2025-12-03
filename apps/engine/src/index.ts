@@ -153,7 +153,8 @@ class tread_executer_engine {
           current_stock_price * quentity,
           symbol,
           user_id,
-          "take profit hit"
+          "take profit hit",
+          id
         );
       }
     } else if (
@@ -164,7 +165,8 @@ class tread_executer_engine {
         current_stock_price * quentity,
         symbol,
         user_id,
-        "trade hold"
+        "trade hold",
+        id
       );
     } else if (current_stock_price * quentity <= sl) {
       this.order_book.delete_order(user_id, "long");
@@ -174,7 +176,8 @@ class tread_executer_engine {
           current_stock_price * quentity,
           symbol,
           user_id,
-          "stop loss hit"
+          "stop loss hit",
+          id
         );
       }
     }
@@ -197,7 +200,8 @@ class tread_executer_engine {
           current_stock_price * quentity,
           symbol,
           user_id,
-          "take profit hit"
+          "take profit hit",
+          id
         );
       }
     } else if (
@@ -208,7 +212,8 @@ class tread_executer_engine {
         current_stock_price * quentity,
         symbol,
         user_id,
-        "trade hold"
+        "trade hold",
+        id
       );
     } else if (current_stock_price * quentity >= sl) {
       this.order_book.delete_order(user_id, "short");
@@ -218,7 +223,8 @@ class tread_executer_engine {
           current_stock_price * quentity,
           symbol,
           user_id,
-          "stop loss hit"
+          "stop loss hit",
+          id
         );
       }
     }
@@ -228,8 +234,11 @@ class tread_executer_engine {
     current_price: number,
     symbol: string,
     user_id: string,
-    message: string
+    message: string,
+    id:number
   ) {
+
+    console.log(current_price);
     this.producer?.send({
       topic: process.env.KAFKA_USER_TREAD_TOPIC!,
       messages: [
@@ -241,6 +250,7 @@ class tread_executer_engine {
               symbol,
               user_id,
               message,
+              id
             },
           }),
         },
@@ -260,6 +270,8 @@ get_market_data.get_user_tread(
 );
 
 /*
+
+
 
 /opt/kafka/bin/kafka-topics.sh --create \
   --topic TRADE \

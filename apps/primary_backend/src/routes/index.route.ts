@@ -29,3 +29,4 @@ route.post("/stop-loss-take-profit",verify_JWT ,take_profit_and_stop_loss);
 route.post("/cancel_tread",verify_JWT,cancel_tread_for_take_profit_and_stop_loss)
 
 export default route;
+// get_user_balance 

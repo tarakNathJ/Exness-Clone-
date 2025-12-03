@@ -225,6 +225,7 @@ function TradePage() {
 
   // --- REFS ---
   const wsRef = useRef<WebSocket | null>(null);
+  const socketRef = useRef<WebSocket | null> (null)
   const selectedPairRef = useRef(selectedPair);
   const currentCandleRef = useRef<any>(null); // { minute: ms, time: string, ... }
   // Initialize history ref with the initial data
@@ -419,8 +420,22 @@ function TradePage() {
 
   // WEBSOCKET (Kept for structure, relies on external service)
   useEffect(() => {
-    const ws = new WebSocket("ws://localhost:5076");
+    const ws = new WebSocket(`${import.meta.env.VITE_API_URI_PUBLISH}`);
+    const socket = new WebSocket(`${import.meta.env.VITE_API_URL}`)
     wsRef.current = ws;
+    socketRef.current = socket;
+
+    socket.onopen =()=>{
+      console.log("socket connect");
+      const email = localStorage.getItem("email");
+      if ( email ==null) return ;
+      socket.send(JSON.stringify({
+        type:"join",
+        payload:{
+          email:email
+        }
+      }))
+    }
 
     ws.onopen = () => {
       console.log("WS Connected");
@@ -445,6 +460,15 @@ function TradePage() {
         console.error("WS Error parsing:", err);
       }
     };
+
+    socket.onmessage = (msg)=>{
+      try {
+        const parsedMsg = JSON.parse(msg.data);
+        console.log(parsedMsg)
+      } catch (error:any) {
+        console.error(" socket Error parsing:", error);
+      }
+    }
 
     ws.onerror = (err) => console.error("WS Error:", err);
     ws.onclose = () => console.log("WS closed");
@@ -661,7 +685,8 @@ function TradePage() {
                       </label>
                       <input
                         type="number"
-                        value={takeProfitPrice.toFixed(2)}
+                        // value="00"
+                        placeholder="enter amount"
                         onChange={(e) =>
                           setTakeProfitPrice(parseFloat(e.target.value) || 0)
                         }
@@ -677,7 +702,8 @@ function TradePage() {
                       </label>
                       <input
                         type="number"
-                        value={stopLossPrice.toFixed(2)}
+                        // value=\
+                        placeholder="enter amount"
                         onChange={(e) =>
                           setStopLossPrice(parseFloat(e.target.value) || 0)
                         }
