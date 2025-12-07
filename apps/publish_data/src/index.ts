@@ -16,14 +16,33 @@ class web_socket_server {
   private WSS;
   private count: number = 0;
   private consumer: Consumer | undefined;
+  private curent_price: any = {};
 
-  // init websocket server 
+  // init websocket server
   constructor(port: number) {
     const server = this.app.listen(port, () => {
       console.log(`server start at ${port}`);
     });
     this.WSS = new WebSocketServer({ server: server });
     this.init_consumer();
+  }
+
+  private setprice(symbol: string, price: number) {
+    try {
+      if (this.curent_price[symbol]) {
+        this.curent_price[symbol].price = price;
+        this.curent_price[symbol].timestamp = Date.now();
+        return true;
+      } else {
+        this.curent_price[symbol] = {
+          price: price,
+          timestamp: Date.now(),
+        };
+        return true;
+      }
+    } catch (error) {
+      return false;
+    }
   }
 
   // kafka consumer consume binance data and  send all data
@@ -34,8 +53,12 @@ class web_socket_server {
         eachMessage: async ({ topic, partition, message }) => {
           const data = JSON.parse(message.value!.toString());
           if (!data) return;
-          
 
+          // store cursent price
+
+          this.setprice(data.data.s, parseFloat(data.data.c));
+
+          // send data all connected client
           this.clients.forEach((client) => {
             client.socket.send(JSON.stringify(data));
           });
@@ -44,7 +67,7 @@ class web_socket_server {
             {
               topic,
               partition,
-              offset:(Number(message.offset) + 1).toString() ,
+              offset: (Number(message.offset) + 1).toString(),
             },
           ]);
         },
@@ -78,8 +101,7 @@ class web_socket_server {
     }
   }
 
-
-  // ws connection 
+  // ws connection
   public start() {
     this.WSS.on("connection", (ws) => {
       this.count = this.count + 1;
@@ -116,7 +138,16 @@ class web_socket_server {
                 id: this.count,
                 socket: ws,
               });
-              console.log("user join", this.count);
+              ws.send(
+                JSON.stringify({
+                  type: "join_successfully",
+                  payload: {
+                    data: this.curent_price,
+                    success: true,
+                    message: "join success fully",
+                  },
+                })
+              );
               break;
 
             default:
@@ -141,13 +172,11 @@ class web_socket_server {
           }
         });
       });
-      ws.on("error" ,()=>{
-        
-      })
+      ws.on("error", () => {});
     });
   }
 }
 
-const port =process.env.PORT
-if(!port) throw new Error("port not found")
+const port = process.env.PORT;
+if (!port) throw new Error("port not found");
 new web_socket_server(parseInt(port)).start();

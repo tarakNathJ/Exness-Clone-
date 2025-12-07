@@ -29,14 +29,13 @@ export interface TradeLogEntry {
   time?: string;
   symbol?: string;
   current_price?: number;
-  message?:string
-   // Added to clarify order type (Execution, TP, SL)
+  message?: string;
+  // Added to clarify order type (Execution, TP, SL)
 }
-            // <strong>Symbol:</strong> {t.symbol} <br />
-            // <strong>Price:</strong> {t.current_price} <br />
-            // <strong>Status:</strong> {t.message} <br />
-            // <strong>Trade ID:</strong> {t.id}
-
+// <strong>Symbol:</strong> {t.symbol} <br />
+// <strong>Price:</strong> {t.current_price} <br />
+// <strong>Status:</strong> {t.message} <br />
+// <strong>Trade ID:</strong> {t.id}
 
 // Available trading pairs
 const AVAILABLE_PAIRS = [
@@ -69,6 +68,7 @@ interface ChartProps {
 
 function generateDummyCandles(
   symbol: string,
+  curentData: Record<string, number> | null = null,
   count: number = 100
 ): CandleData[] {
   const now = new Date();
@@ -76,7 +76,7 @@ function generateDummyCandles(
 
   const startTime = new Date(now.getTime() - count * 60 * 1000);
 
-  const basePrices: Record<string, number> = {
+  const basePrices: Record<string, number> = curentData || {
     BTCUSDT: 92000,
     ETHUSDT: 2802.31,
     SOLUSDT: 2802.31,
@@ -149,8 +149,8 @@ interface TradeLogProps {
 function TradeLog({ activity, selectedPair }: TradeLogProps) {
   const assetSymbol = selectedPair.replace("USDT", "");
   const [trades, setTrades] = useState(activity); // manage local state
-  
 
+ 
   // onCancel function to delete a trade
   const onCancel = (tradeId: number) => {
     setTrades((prevTrades) => prevTrades.filter((t) => t.id !== tradeId));
@@ -158,53 +158,50 @@ function TradeLog({ activity, selectedPair }: TradeLogProps) {
 
   // Reverse the array to show most recent trades first
   // const recentTrades = activity.slice().reverse();
-  const  cancel_tread= async(id:number)=>{
+  const cancel_tread = async (id: number) => {
     try {
-      const responce = await api_init.post("/api/cancel_tread",{id:id});
-      if(responce.data.success){
-        onCancel(id)
-
+      const responce = await api_init.post("/api/cancel_tread", { id: id });
+      if (responce.data.success) {
+        onCancel(id);
       }
-    } catch (error:any) {
-      console.log(error.message)
+    } catch (error: any) {
+      console.log(error.message);
     }
-  }
+  };
 
   return (
-<div className="space-y-4">
-  <h2 className="text-xl font-semibold text-white flex items-center gap-2 pb-2 border-b border-gray-700">
-    <Clock className="w-5 h-5 text-blue-400" />
-    Recent Activity
-  </h2>
+    <div className="space-y-4">
+      <h2 className="text-xl font-semibold text-white flex items-center gap-2 pb-2 border-b border-gray-700">
+        <Clock className="w-5 h-5 text-blue-400" />
+        Recent Activity
+      </h2>
 
-  <div className="space-y-3 max-h-[700px] overflow-y-auto">
-    {activity.length === 0 && (
-      <p className="text-sm text-gray-400 text-center py-4">No active trades</p>
-    )}
+      <div className="space-y-3 max-h-[700px] overflow-y-auto">
+        {activity.length === 0 && (
+          <p className="text-sm text-gray-400 text-center py-4">
+            No active trades
+          </p>
+        )}
 
-    {activity.map((t) => (
-      <div
-        key={t.id}
-        className="p-4 rounded-lg border border-gray-700 bg-gray-800 text-white shadow-sm"
-      >
-        <p>
-          <span className="font-semibold text-gray-300">Symbol:</span>{" "}
-          <span className="text-white">{t.symbol}</span>
-        </p>
-        <p>
-          <span className="font-semibold text-gray-300">Price:</span>{" "}
-          <span className="text-green-400">{t.current_price}</span>
-        </p>
-        <p>
-          <span className="font-semibold text-gray-300">Trade ID:</span>{" "}
-          <span className="text-gray-200">{t.id}</span>
-        </p>
+        {activity.map((t) => (
+          <div
+            key={t.id}
+            className="p-4 rounded-lg border border-gray-700 bg-gray-800 text-white shadow-sm"
+          >
+            <p>
+              <span className="font-semibold text-gray-300">Symbol:</span>{" "}
+              <span className="text-white">{t.symbol}</span>
+            </p>
+            <p>
+              <span className="font-semibold text-gray-300">Price:</span>{" "}
+              <span className="text-green-400">{t.current_price}</span>
+            </p>
+            <p>
+              <span className="font-semibold text-gray-300">Trade ID:</span>{" "}
+              <span className="text-gray-200">{t.id}</span>
+            </p>
 
-
-
-
-
-        {t.message && (
+            {t.message && (
               <p>
                 <span className="font-semibold text-gray-300">Status:</span>{" "}
                 <span className="text-yellow-400">{t.message}</span>
@@ -213,20 +210,15 @@ function TradeLog({ activity, selectedPair }: TradeLogProps) {
 
             {/* Cancel button */}
             <button
-              onClick={() => cancel_tread(t.id!) }
+              onClick={() => cancel_tread(t.id!)}
               className="mt-2 px-3 py-1 text-sm bg-red-600 hover:bg-red-700 rounded text-white self-start"
             >
               Cancel
             </button>
           </div>
         ))}
-      
-    
-  </div>
-
-  
-</div>
-
+      </div>
+    </div>
   );
 }
 
@@ -506,7 +498,6 @@ function TradePage() {
     socket.onmessage = (msg) => {
       try {
         const parsedMsg = JSON.parse(msg.data);
-
         if (parsedMsg.type !== "tread_status") return;
         const trade = parsedMsg.data;
         if (!trade?.id) return;
@@ -878,11 +869,7 @@ function TradePage() {
             <div className="space-y-6">
               <div className="p-6 rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 h-full">
                 {/* Pass tradeHistory to TradeLog */}
-                <TradeLog
-                  activity={activity}
-                  selectedPair={selectedPair}
-                  
-                />
+                <TradeLog activity={activity} selectedPair={selectedPair} />
               </div>
             </div>
           </div>

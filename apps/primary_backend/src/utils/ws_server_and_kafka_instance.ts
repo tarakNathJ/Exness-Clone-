@@ -3,6 +3,7 @@ import { config } from "dotenv";
 import { set_curent_price } from "../controller/auth.controller.js";
 import { WebSocketServer, type WebSocket } from "ws";
 import { db, eq, user, user_unique_id } from "@database/main/dist/index.js";
+// import { curent_price } from "../controller/auth.controller.js";
 config();
 
 interface user {
@@ -193,6 +194,7 @@ class kafka_instance {
                 JSON.stringify({
                   type: "join_success",
                   message: "Joined successfully",
+                  
                 })
               );
               break;

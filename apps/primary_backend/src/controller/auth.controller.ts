@@ -22,7 +22,7 @@ const kafka = new kafka_instance(
   process.env.KAFKA_TOPICs!
 );
 
-const curent_price: any = {};
+export const curent_price: any = {};
 
 // set curent price
 export const set_curent_price = (symbol: string, price: number) => {
