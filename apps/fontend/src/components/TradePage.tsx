@@ -150,7 +150,6 @@ function TradeLog({ activity, selectedPair }: TradeLogProps) {
   const assetSymbol = selectedPair.replace("USDT", "");
   const [trades, setTrades] = useState(activity); // manage local state
 
- 
   // onCancel function to delete a trade
   const onCancel = (tradeId: number) => {
     setTrades((prevTrades) => prevTrades.filter((t) => t.id !== tradeId));
@@ -479,11 +478,40 @@ function TradePage() {
     ws.onmessage = (msg) => {
       try {
         const parsedMsg = JSON.parse(msg.data);
-        if (!parsedMsg.data || !parsedMsg.data.s) return;
 
-        if (parsedMsg.data.s !== selectedPairRef.current) {
-          return;
+        // When server confirms subscription
+        if (parsedMsg.type === "join_successfully") {
+          const obj: Record<string, number> = {};
+
+          // Extract price data safely
+          for (const [key, value] of Object.entries(parsedMsg.payload.data)) {
+            const v = value as { price?: number };
+            obj[key] = typeof v.price === "number" ? v.price : 0;
+          }
+
+          // Update selected pair ref
+          selectedPairRef.current = selectedPair;
+
+          // Generate fresh candle set using prices from WebSocket
+          const freshDummyData = generateDummyCandles(selectedPair, obj);
+
+          // Update chart state & refs
+          setCandles(freshDummyData);
+          historyRef.current = [...freshDummyData];
+          currentCandleRef.current = null;
+
+          // Update current price
+          const last = freshDummyData[freshDummyData.length - 1];
+          setCurrentTickerPrice(last.close);
+          setPrice(last.close);
+
+          console.log("Initial data loaded ✔️");
+          return; // stop here (first message processed)
         }
+
+        // All other messages = live ticks
+        if (!parsedMsg.data || !parsedMsg.data.s) return;
+        if (parsedMsg.data.s !== selectedPairRef.current) return;
 
         const tick = mapTick(parsedMsg.data);
         if (!tick.price) return;
