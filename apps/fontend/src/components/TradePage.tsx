@@ -86,7 +86,7 @@ function generateDummyCandles(
   };
 
   let currentPrice = basePrices[symbol] || 45000;
-
+  
   for (let i = 0; i < count; i++) {
     const candleTime = new Date(startTime.getTime() + i * 60 * 1000);
 
@@ -233,8 +233,13 @@ interface TradeData {
 // MAIN APPLICATION COMPONENT
 // -------------------------------
 function TradePage() {
+  const candleObject = useRef<Record<string, number>>({});
+
+
+
   // --- Initialization using a single source of truth ---
   const INITIAL_PAIR = "BTCUSDT";
+  
   const initialData = generateDummyCandles(INITIAL_PAIR);
 
   // --- STATE ---
@@ -246,6 +251,8 @@ function TradePage() {
   // Trade History
   const [tradeHistory, setTradeHistory] = useState<TradeLogEntry[]>([]);
   const tradeIdRef = useRef(0);
+
+  
 
   // --- REFS ---
   const wsRef = useRef<WebSocket | null>(null);
@@ -379,7 +386,8 @@ function TradePage() {
   useEffect(() => {
     selectedPairRef.current = selectedPair;
 
-    const freshDummyData = generateDummyCandles(selectedPair);
+
+    const freshDummyData = generateDummyCandles(selectedPair,candleObject?.current);
 
     // CRITICAL FIX: Reset all data related state and refs simultaneously
     setCandles(freshDummyData);
@@ -494,6 +502,7 @@ function TradePage() {
 
           // Generate fresh candle set using prices from WebSocket
           const freshDummyData = generateDummyCandles(selectedPair, obj);
+          candleObject.current = obj;
 
           // Update chart state & refs
           setCandles(freshDummyData);
