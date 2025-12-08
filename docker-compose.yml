@@ -1,5 +1,3 @@
-version: "3.9"
-
 services:
   # ===================================
   # Primary Backend (Auth)
@@ -15,14 +13,13 @@ services:
       KAFKA_CLIENT_ID: "mykafka"
       KAFKA_TOPICs: "TRADE"
       PORT: 9078
-      KAFKA_BROKER: "localhost:9092"
+      KAFKA_BROKER: "kafka:9092"
       KAFKA_GROUP_ID: "test-primary-backend"
       KAFKA_TOPIC: "MARKET-DATA"
       KAFKA_GROUP_ID_PRIMARY: "test-group-user-result"
       KAFKA_TOPIC_PRIMARY: "USER-TRADE"
       JWT_SECRET: "my-first-secret"
       KAFKA_GROUP_IDs: "simpol-group"
-
     ports:
       - "3000:3000"
       - "9078:9078"
@@ -41,7 +38,7 @@ services:
     environment:
       PORT: 5076
       KAFKA_TOPIC: "MARKET-DATA"
-      KAFKA_BROKER: "localhost:9092"
+      KAFKA_BROKER: "kafka:9092"
       KAFKA_GROUP_ID: "test-group-publish"
       KAFKA_CLIENT_ID: "mykafka"
     ports:
@@ -60,7 +57,7 @@ services:
       - kafka
     environment:
       KAFKA_TOPIC: "MARKET-DATA"
-      KAFKA_BROCKER: "localhost:9092"
+      KAFKA_BROCKER: "kafka:9092"
       KAFKA_CLIENT_ID: "mykafka"
     restart: always
     networks:
@@ -74,20 +71,23 @@ services:
     container_name: engine
     depends_on:
       - kafka
-      - imescaledb
+      - timescaledb
     environment:
       MARKET_KAFKA_GROUP_ID: "test-group"
       MARKET_KAFKA_TOPIC: "MARKET-DATA"
       USER_KAFKA_GROUP_ID: "test-group-user"
       USER_KAFKA_TOPIC: "TRADE"
       KAFKA_CLIENT_ID: "mykafka"
-      KAFKA_BROKER: "localhost:9092"
+      KAFKA_BROKER: "kafka:9092"
       KAFKA_USER_TREAD_TOPIC: "USER-TRADE"
       DATABASE_URL: "postgresql://postgres:mysecretpassword@timescaledb:5432/postgres"
     restart: always
     networks:
       - backend_network
 
+  # ===================================
+  # TimescaleDB (Postgres)
+  # ===================================
   timescaledb:
     image: timescale/timescaledb:latest-pg17
     container_name: timescaledb
@@ -113,7 +113,6 @@ services:
     ports:
       - "9092:9092"
     environment:
-      # ----- Core KRaft configuration -----
       KAFKA_NODE_ID: 1
       KAFKA_PROCESS_ROLES: broker,controller
       KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092,CONTROLLER://0.0.0.0:9093
@@ -122,34 +121,23 @@ services:
       KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
       KAFKA_LOG_DIRS: /var/lib/kafka/data
-
-      # ----- Memory limit -----
       KAFKA_HEAP_OPTS: "-Xmx1536M -Xms512M"
-
-      # ----- Lightweight tuning -----
       KAFKA_NUM_NETWORK_THREADS: 3
       KAFKA_NUM_IO_THREADS: 3
       KAFKA_NUM_REPLICA_FETCHERS: 1
       KAFKA_QUEUED_MAX_REQUESTS: 20
-
-      # ----- Single-node cluster -----
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
       KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
       KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
       KAFKA_MIN_INSYNC_REPLICAS: 1
       KAFKA_NUM_PARTITIONS: 1
       KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
-
-      # ----- Logging & cleanup -----
       KAFKA_LOG_FLUSH_INTERVAL_MESSAGES: 10000
       KAFKA_LOG_FLUSH_INTERVAL_MS: 3000
       KAFKA_LOG_RETENTION_HOURS: 24
       KAFKA_LOG_SEGMENT_BYTES: 1073741824
       KAFKA_LOG_CLEANER_ENABLE: "true"
-
-      # ----- Cluster ID -----
       CLUSTER_ID: MkU3OEVBNTcwNTJENDM2Qk
-
     volumes:
       - kafka-data:/var/lib/kafka/data
     restart: unless-stopped
@@ -159,23 +147,6 @@ services:
       resources:
         limits:
           memory: 2g
-
-  # ===================================
-  # Nginx Reverse Proxy
-  # ===================================
-  nginx:
-    image: nginx:latest
-    container_name: nginx-proxy
-    depends_on:
-      - publish_data
-      - primary_backend
-    ports:
-      - "80:80"
-    volumes:
-      - ./nginx/conf.d:/etc/nginx/conf.d
-    restart: always
-    networks:
-      - backend_network
 
 # ===================================
 # Networking & Volumes
