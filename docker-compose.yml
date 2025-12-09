@@ -1,3 +1,5 @@
+version: "3.9"
+
 services:
   # ===================================
   # Primary Backend (Auth)
@@ -31,7 +33,7 @@ services:
   # Publish_data Service
   # ===================================
   publish_data:
-    image: taraknathjana09/publish_data:latest  
+    image: taraknathjana09/publish_data:latest
     container_name: publish_data
     depends_on:
       - kafka
@@ -51,13 +53,13 @@ services:
   # Poller
   # ===================================
   poller:
-    image: taraknathjana09/poller:latest 
+    image: taraknathjana09/poller:latest
     container_name: poller
     depends_on:
       - kafka
     environment:
       KAFKA_TOPIC: "MARKET-DATA"
-      KAFKA_BROCKER: "kafka:9092"
+      KAFKA_BROKER: "kafka:9092"
       KAFKA_CLIENT_ID: "mykafka"
     restart: always
     networks:
@@ -79,14 +81,14 @@ services:
       USER_KAFKA_TOPIC: "TRADE"
       KAFKA_CLIENT_ID: "mykafka"
       KAFKA_BROKER: "kafka:9092"
-      KAFKA_USER_TREAD_TOPIC: "USER-TRADE"
+      KAFKA_USER_TRADE_TOPIC: "USER-TRADE"
       DATABASE_URL: "postgresql://postgres:mysecretpassword@timescaledb:5432/postgres"
     restart: always
     networks:
       - backend_network
 
   # ===================================
-  # TimescaleDB (Postgres)
+  # TimescaleDB
   # ===================================
   timescaledb:
     image: timescale/timescaledb:latest-pg17
@@ -104,7 +106,7 @@ services:
       - backend_network
 
   # ===================================
-  # Apache Kafka (Optimized for 2GB RAM)
+  # Apache Kafka
   # ===================================
   kafka:
     image: apache/kafka:latest
@@ -147,6 +149,42 @@ services:
       resources:
         limits:
           memory: 2g
+
+  # ===================================
+  # Pushgateway
+  # ===================================
+  pushgateway:
+    image: prom/pushgateway:latest
+    container_name: pushgateway
+    ports:
+      - "9091:9091"
+    restart: always
+
+  # ===================================
+  # Prometheus
+  # ===================================
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus-config.yml:/etc/prometheus/prometheus.yml
+    restart: always
+    depends_on:
+      - pushgateway
+
+  # ===================================
+  # Grafana
+  # ===================================
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana
+    ports:
+      - "3000:3000"
+    restart: always
+    depends_on:
+      - prometheus
 
 # ===================================
 # Networking & Volumes
