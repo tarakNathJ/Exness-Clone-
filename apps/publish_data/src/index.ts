@@ -2,6 +2,7 @@ import WebSocket, { WebSocketServer } from "ws";
 import express from "express";
 import { Kafka, type Consumer } from "kafkajs";
 import { config } from "dotenv";
+import { PrometheusService } from "@express/monitoring";
 
 config();
 
@@ -17,6 +18,7 @@ class web_socket_server {
   private count: number = 0;
   private consumer: Consumer | undefined;
   private curent_price: any = {};
+  private metrics = new PrometheusService();
 
   // init websocket server
   constructor(port: number) {
@@ -25,6 +27,10 @@ class web_socket_server {
     });
     this.WSS = new WebSocketServer({ server: server });
     this.init_consumer();
+
+    setInterval(async () => {
+      await this.metrics.pushMetrics("ws_kafka_publisher");
+    }, 5000);
   }
 
   private setprice(symbol: string, price: number) {
@@ -51,9 +57,12 @@ class web_socket_server {
       const get_consumer = await this.init_kafka(process.env.KAFKA_GROUP_ID!);
       get_consumer.run({
         eachMessage: async ({ topic, partition, message }) => {
+          const start = performance.now();
           const data = JSON.parse(message.value!.toString());
           if (!data) return;
 
+          // Update metrics
+          this.metrics.kafka_messages_consumed.inc({ topic });
           // store cursent price
 
           this.setprice(data.data.s, parseFloat(data.data.c));
@@ -62,6 +71,12 @@ class web_socket_server {
           this.clients.forEach((client) => {
             client.socket.send(JSON.stringify(data));
           });
+
+          // Track processing duration
+          this.metrics.trade_processing_duration.observe(
+            { topic },
+            (performance.now() - start) / 1000
+          );
 
           get_consumer.commitOffsets([
             {
@@ -105,6 +120,8 @@ class web_socket_server {
   public start() {
     this.WSS.on("connection", (ws) => {
       this.count = this.count + 1;
+      this.metrics.ws_connections.inc();
+      this.metrics.ws_active_connections.inc();
       ws.on("message", (data) => {
         // chack message are exist or  not
         let message;
@@ -171,6 +188,7 @@ class web_socket_server {
             console.log(`Client disconnected ID=${id}`);
           }
         });
+         this.metrics.ws_active_connections.dec();
       });
       ws.on("error", () => {});
     });
