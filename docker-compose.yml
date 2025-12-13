@@ -5,7 +5,7 @@ services:
   # Primary Backend (Auth)
   # ===================================
   primary-backend:
-    image: taraknathjana09/primary_backend:latest
+    image: apps/primary_backend:latest
     container_name: primary_backend
     depends_on:
       - kafka
@@ -34,7 +34,7 @@ services:
   # Publish_data Service
   # ===================================
   publish_data:
-    image: taraknathjana09/publish_data:latest
+    image: apps/publish_data:latest
     container_name: publish_data
     depends_on:
       - kafka
@@ -55,7 +55,7 @@ services:
   # Poller
   # ===================================
   poller:
-    image: taraknathjana09/poller:latest
+    image: apps/poller:latest
     container_name: poller
     depends_on:
       - kafka
@@ -72,19 +72,22 @@ services:
   # Engine
   # ===================================
   engine:
-    image: taraknathjana09/engine:latest
+    image: apps/engine:latest
     container_name: engine
     depends_on:
       - kafka
       - timescaledb
     environment:
-      MARKET_KAFKA_GROUP_ID: "test-group"
-      MARKET_KAFKA_TOPIC: "MARKET-DATA"
-      USER_KAFKA_GROUP_ID: "test-group-user"
-      USER_KAFKA_TOPIC: "TRADE"
+      MARKET_KAFKA_GROUP_ID: test-group
+      MARKET_KAFKA_TOPIC: MARKET-DATA
+      
+      USER_KAFKA_GROUP_ID: test-group-user
+      USER_KAFKA_TOPIC: TRADE
+      
       KAFKA_CLIENT_ID: "mykafka"
       KAFKA_BROKER: "kafka:9092"
-      KAFKA_USER_TRADE_TOPIC: "USER-TRADE"
+
+      KAFKA_USER_TREAD_TOPIC: USER-TRADE
       CLIENT_URL: http://pushgateway:9091
       DATABASE_URL: "postgresql://postgres:mysecretpassword@timescaledb:5432/postgres"
     restart: always
@@ -164,6 +167,8 @@ services:
     ports:
       - "9091:9091"
     restart: always
+    networks:
+    - backend_network
 
   # ===================================
   # Prometheus
@@ -178,6 +183,8 @@ services:
     restart: always
     depends_on:
       - pushgateway
+    networks:
+      - backend_network
 
   # ===================================
   # Grafana
@@ -186,7 +193,7 @@ services:
     image: grafana/grafana:latest
     container_name: grafana
     ports:
-      - "3000:3000"
+      - "3001:3000"
     restart: always
     depends_on:
       - prometheus
