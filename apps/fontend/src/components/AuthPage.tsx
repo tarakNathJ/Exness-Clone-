@@ -81,7 +81,7 @@ export function AuthPage({
           toast("success fully sign up", {
             description: result.data,
           });
-          navigate("/trade");
+          navigate("/portfolio");
         }
       } catch (error: any) {
         toast("signup failed", {

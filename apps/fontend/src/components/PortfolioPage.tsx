@@ -27,7 +27,6 @@ import { useDispatch, useSelector } from "react-redux";
 import { add_data } from "../redux/user_info";
 import { toast } from "sonner";
 
-
 // import { Trade, Holding } from "../types";
 export interface Holding {
   symbol: string;
@@ -55,6 +54,9 @@ interface object_type {
   qty: number;
 }
 interface object_Trade {
+  tread_type: string;
+  quantity: ReactNode;
+  price: any;
   date: string;
   open: number;
   qty: number;
@@ -186,9 +188,7 @@ export function PortfolioPage() {
   const totalGain = totalValue - totalCost;
   const totalGainPercent = totalCost > 0 ? (totalGain / totalCost) * 100 : 0;
 
-  const handleAddTransaction = (data: Omit<Trade, "status">) => {
-  
-  };
+  const handleAddTransaction = (data: Omit<Trade, "status">) => {};
 
   // @ts-ignore
   const data = useSelector((state) => state.data.data);
@@ -237,15 +237,14 @@ export function PortfolioPage() {
           if (responce.data.success) {
             dispatch(add_data(responce.data.data));
             setBalance(responce.data.data);
-            toast("success fully get user info",{
-              description:responce.data.success
-            })
+            toast("success fully get user info", {
+              description: responce.data.success,
+            });
           }
-          
         } catch (error: any) {
-          toast(`failed to get user data `,{
-            description:error.message
-          })
+          toast(`failed to get user data `, {
+            description: error.message,
+          });
         }
       }
       setBalance(data);
@@ -291,7 +290,7 @@ export function PortfolioPage() {
             </p>
 
             <p className="text-4xl font-bold mb-4 tracking-tight">
-              ${data?.user_balance?.balance}
+              ${(data?.user_balance?.balance).toFixed(2)}
             </p>
             <div className="flex items-center gap-2 bg-white/20 w-fit px-3 py-1 rounded-full backdrop-blur-sm">
               <ArrowUpRight className="w-4 h-4" />
@@ -338,10 +337,9 @@ export function PortfolioPage() {
             Total Investment
           </p>
           <p className="text-2xl font-bold text-slate-900 dark:text-white mt-1">
-            {data?.user_option_trade?.reduce(
-              (sum: number, trade: object_type) => sum + trade.open,
-              0
-            )}
+            {data?.user_option_trade
+              ?.reduce((sum: number, trade: object_type) => sum + trade.open, 0)
+              .toFixed(2)}
           </p>
         </div>
 
@@ -496,7 +494,80 @@ export function PortfolioPage() {
         </div>
       </div>
 
-      
+      {/* curent tread */}
+      <div className="p-6 rounded-3xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden">
+        <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-6 px-2">
+          Market Terminology
+        </h3>
+
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead className="bg-slate-50 dark:bg-slate-800/50">
+              <tr>
+                <th className="px-6 py-4 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                  Type
+                </th>
+                <th className="px-6 py-4 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                  Asset
+                </th>
+                <th className="px-6 py-4 text-right text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                  Quantity
+                </th>
+
+                <th className="px-6 py-4 text-right text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                  Price
+                </th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100 dark:divide-slate-700/50">
+              {data?.user_normal_trade?.map(
+                (trade: object_Trade, i: number) => (
+                  <tr
+                    key={i}
+                    className="hover:bg-slate-50/80 dark:hover:bg-slate-700/30 transition-colors"
+                  >
+                    <td className="px-6 py-4">
+                      <span
+                        className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold border ${
+                          trade.tread_type === "long"
+                            ? "bg-green-500/5 border-green-500/20 text-green-600 dark:text-green-400"
+                            : trade.tread_type === "short"
+                              ? "bg-red-500/5 border-red-500/20 text-red-600 dark:text-red-400"
+                              : "bg-blue-500/5 border-blue-500/20 text-blue-600 dark:text-blue-400"
+                        }`}
+                      >
+                        {trade.tread_type === "long" ? (
+                          <ArrowDownRight className="w-3 h-3" />
+                        ) : trade.tread_type === "short" ? (
+                          <ArrowUpRight className="w-3 h-3" />
+                        ) : (
+                          <Wallet className="w-3 h-3" />
+                        )}
+                        {trade.tread_type.toUpperCase()}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 text-sm font-bold text-slate-900 dark:text-white">
+                      {trade.symbol}
+                    </td>
+                    <td className="px-6 py-4 text-right text-sm text-slate-700 dark:text-slate-300 font-medium">
+                      {trade.quantity}
+                    </td>
+                    <td className="px-6 py-4 text-right text-sm text-slate-600 dark:text-slate-400">
+                      ${(trade.price).toFixed(2)}
+                    </td>
+                    <td className="px-6 py-4 text-right">
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300">
+                        complete
+                      </span>
+                    </td>
+                  </tr>
+                )
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
       {/* Trade History */}
       <div className="p-6 rounded-3xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden">
         <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-6 px-2">

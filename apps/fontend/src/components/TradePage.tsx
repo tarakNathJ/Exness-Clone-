@@ -32,7 +32,6 @@ export interface TradeLogEntry {
   // Added to clarify order type (Execution, TP, SL)
 }
 
-
 // Available trading pairs
 const AVAILABLE_PAIRS = [
   { symbol: "BTCUSDT", label: "BTC/USDT" },
@@ -218,6 +217,14 @@ function TradeLog({ activity, selectedPair }: TradeLogProps) {
           </div>
         ))}
       </div>
+
+      <h2 className="text-xl font-semibold text-white flex items-center gap-2 pb-2 border-b border-gray-700">
+        stocks
+      </h2>
+
+      <div className="space-y-3 max-h-[700px] overflow-y-auto">
+        <div className="p-4 rounded-lg border border-gray-700 bg-gray-800 text-white shadow-sm">hello</div>
+      </div>
     </div>
   );
 }
@@ -325,8 +332,6 @@ function TradePage() {
 
     switch (orderType) {
       case "bracket":
- 
-
         try {
           const responce = await api_init.post("/api/stop-loss-take-profit", {
             // @ts-ignore
@@ -350,6 +355,7 @@ function TradePage() {
       case "market":
         if (tradeType == "buy") {
           try {
+            console.log(assetSymbol, "  ", amount);
             const responce = await api_init.post(
               "/api/purchase-new-simple-trade",
               {
@@ -562,8 +568,6 @@ function TradePage() {
         const trade = parsedMsg.data;
         if (!trade?.id) return;
         upsert_Tread_Data(trade);
-
-       
       } catch (error: any) {
         console.error(" socket Error parsing:", error);
       }

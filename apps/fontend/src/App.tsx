@@ -9,6 +9,7 @@ import { Layout } from "./components/Layout.jsx";
 
 import { PortfolioPage } from "./components/PortfolioPage.jsx";
 import TradePage from "./components/TradePage.js";
+import { Toaster } from 'sonner'
 
 type Page =
   | "landing"
@@ -66,6 +67,7 @@ function App() {
           </Routes>
         </Layout>
       </ThemeProvider>
+      <Toaster/>
     </>
   );
 }
