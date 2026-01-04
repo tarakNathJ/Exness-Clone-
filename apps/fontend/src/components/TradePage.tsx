@@ -447,6 +447,7 @@ function TradePage() {
     switch (orderType) {
       case "bracket":
         try {
+          console.log(takeProfitPrice ,"    ",stopLossPrice);
           const responce = await api_init.post("/api/stop-loss-take-profit", {
             // @ts-ignore
             symbol: assetSymbol,
