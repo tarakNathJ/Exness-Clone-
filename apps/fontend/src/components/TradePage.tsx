@@ -263,12 +263,21 @@ function TradeLog({ activity, selectedPair }: TradeLogProps) {
               <span className="text-gray-200">{t.id}</span>
             </p>
 
-            {t.message && (
-              <p>
-                <span className="font-semibold text-gray-300">Status:</span>{" "}
-                <span className="text-yellow-400">{ t.message == "trade hold"? "Open Position": `${t.message}` }</span>
-              </p>
-            )}
+{t.message && (
+  <p>
+    <span className="font-semibold text-gray-300">Status:</span>{" "}
+    {t.message === "take profit hit" && (
+      <span className="text-green-400">Take Profit Reached</span>
+    )}
+    {t.message === "trade hold" && (
+      <span className="text-blue-400">Open Position</span>
+    )}
+    {t.message === "stop loss hit" && (
+      <span className="text-red-400">Stopped Out</span>
+    )}
+  </p>
+)}
+
 
             {/* Cancel button */}
             <button
