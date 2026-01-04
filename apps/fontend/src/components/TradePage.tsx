@@ -266,7 +266,7 @@ function TradeLog({ activity, selectedPair }: TradeLogProps) {
             {t.message && (
               <p>
                 <span className="font-semibold text-gray-300">Status:</span>{" "}
-                <span className="text-yellow-400">{t.message}</span>
+                <span className="text-yellow-400">{ t.message == "trade hold"? "Open Position": `${t.message}` }</span>
               </p>
             )}
 
