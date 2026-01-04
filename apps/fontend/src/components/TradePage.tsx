@@ -388,7 +388,7 @@ function TradePage() {
   useEffect(() => {
     if (currentTickerPrice > 0 && orderType === "bracket") {
       // Example: TP/SL 0.5% away (A reasonable starting point for BTC/ETH)
-      const deviation = currentTickerPrice * 0.005;
+      const deviation = currentTickerPrice;
 
       let newTP: number, newSL: number;
 
