@@ -72,7 +72,7 @@ class tread_executer_engine {
                 price,
                 order.qty,
                 order.symbol,
-                order.user,
+                order.user_id,
                 order.id
               );
             }
@@ -129,6 +129,7 @@ class tread_executer_engine {
         if (!data) return;
 
         if (data.type === "new_trade") {
+          console.log("new trade : ",data);
           // console.log("your new tread : ",data)
           this.order_book.add_order(data.data.type, data.data.price, {
             user_id: data.data.user_unique_id,
@@ -168,6 +169,8 @@ class tread_executer_engine {
     user_id: string,
     id: string
   ) {
+
+    console.log( "dsjfhgsdjfhd:  ",user_id)
     // console.log( "current price : ", current_stock_price * quentity)
     // console.log("your stop loss price: ",tp)
     if (current_stock_price * quentity >= tp) {
@@ -290,7 +293,7 @@ class tread_executer_engine {
     /////////////////// monitoring//////////////////
     // metrics.kafka_messages_produced.inc({topic:process.env.KAFKA_USER_TREAD_TOPIC!});
     /////////////////////////////////////////
-
+    console.log(current_price ,user_id ,"   ",id );
     this.producer?.send({
       topic: process.env.KAFKA_USER_TREAD_TOPIC!,
       messages: [

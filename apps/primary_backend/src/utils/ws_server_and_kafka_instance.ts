@@ -145,9 +145,8 @@ class kafka_instance {
           }
           try {
             if (!data.data) return;
-            const user_data = this.users.find(
-              (us) => us.id === data.data.user_id
-            );
+            const user_data = this.users.find((us) => us.id === data.data.user_id);
+            
 
             user_data?.ws.send(JSON.stringify(data));
             ////////////////////////////metrics////////////////

@@ -178,26 +178,26 @@ class tread_executer_engine {
       ],
     });
 
-    await this.producer?.send({
-      topic: process.env.STORE!,
-      messages: [
-        {
-          value: JSON.stringify({
-            type: "store_trade",
-            data: {
-              id: id,
-              user_unique_id: user_unique_id,
-              symbol: symbol,
-              quantity: quantity,
-              price: current_price,
-              type: type,
-              take_profit: take_profit,
-              stop_loss: stop_loss,
-            },
-          }),
-        },
-      ],
-    });
+    // await this.producer?.send({
+    //   topic: process.env.STORE!,
+    //   messages: [
+    //     {
+    //       value: JSON.stringify({
+    //         type: "store_trade",
+    //         data: {
+    //           id: id,
+    //           user_unique_id: user_unique_id,
+    //           symbol: symbol,
+    //           quantity: quantity,
+    //           price: current_price,
+    //           type: type,
+    //           take_profit: take_profit,
+    //           stop_loss: stop_loss,
+    //         },
+    //       }),
+    //     },
+    //   ],
+    // });
   }
 }
 
