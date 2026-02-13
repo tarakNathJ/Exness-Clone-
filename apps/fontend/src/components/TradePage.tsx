@@ -266,7 +266,9 @@ function TradeLog({ activity, selectedPair }: TradeLogProps) {
             {t.message && (
               <p>
                 <span className="font-semibold text-gray-300">Status:</span>{" "}
-                <span className="text-yellow-400">{t.message}</span>
+                <span className={`${t.message =="take profit hit" ?"text-green-400":"hidden"}`}>{t.message =="take profit hit" ?"Take-profit achieved":""}</span>
+                <span className={`${t.message =="trade hold" ?"text-yellow-400":"hidden"}`}>{t.message =="trade hold" ?"Trade is on hold":""}</span>
+                <span className={`${t.message =="stop loss hit" ?"text-red-400":"hidden"}`}>{t.message =="stop loss hit" ?"Stop-loss achieved":""}</span>
               </p>
             )}
 
@@ -388,7 +390,7 @@ function TradePage() {
   useEffect(() => {
     if (currentTickerPrice > 0 && orderType === "bracket") {
       // Example: TP/SL 0.5% away (A reasonable starting point for BTC/ETH)
-      const deviation = currentTickerPrice * 0.005;
+      const deviation = currentTickerPrice;
 
       let newTP: number, newSL: number;
 
@@ -447,20 +449,34 @@ function TradePage() {
     switch (orderType) {
       case "bracket":
         try {
-          const responce = await api_init.post("/api/stop-loss-take-profit", {
-            // @ts-ignore
-            symbol: assetSymbol,
-            quantity: amount,
-            type: tradeType == "buy" ? "long" : "short",
-            take_profit: takeProfitPrice,
-            stop_loss: stopLossPrice,
-          });
+          socketRef.current.send(
+            JSON.stringify({
+              type: "join",
+              payload: {
+                uId: sessionStorage.getItem("uID"),
+                symbol: assetSymbol,
+                quantity: amount,
+                type: tradeType == "buy" ? "long" : "short",
+                take_profit: takeProfitPrice,
+                stop_loss: stopLossPrice,
+              },
+            })
+          );
+          // , , , take_profit, stop_loss,
+          // const responce = await api_init.post("/api/stop-loss-take-profit", {
+          //   // @ts-ignore
+          //   symbol: assetSymbol,
+          //   quantity: amount,
+          //   type: tradeType == "buy" ? "long" : "short",
+          //   take_profit: takeProfitPrice,
+          //   stop_loss: stopLossPrice,
+          // });
 
-          if (responce.data.success) {
-            toast(`success fully ${tradeType}`, {
-              description: responce.data.success,
-            });
-          }
+          // if (responce.data.success) {
+          //   toast(`success fully ${tradeType}`, {
+          //     description: responce.data.success,
+          //   });
+          // }
         } catch (error: any) {
           toast(`${error.messages || "failed"}`);
         }
@@ -711,7 +727,7 @@ function TradePage() {
         src="https://unpkg.com/lightweight-charts/dist/lightweight-charts.standalone.production.js"
         type="text/javascript"
       ></script>
-      <div className="min-h-screen bg-slate-50 dark:bg-slate-900 p-6 font-sans">
+      <div className="min-h-screen bg-slate-50 dark:bg-slate-900 p-1 font-sans">
         <div className="max-w-7xl mx-auto space-y-6">
           {/* Page Header */}
           <div>
@@ -1035,3 +1051,5 @@ function TradePage() {
 
 // Make the main component the default export
 export default TradePage;
+
+

@@ -1,3 +1,4 @@
+import { index } from "drizzle-orm/gel-core";
 import {
   boolean,
   integer,
@@ -103,6 +104,7 @@ export const options_tread = pgTable("options_tread", {
   close_price: doublePrecision("close_price"),
   take_profit: doublePrecision("take_profit").notNull(),
   stop_loss: doublePrecision("stop_loss").notNull(),
+  tread_id: varchar("tread_id").unique().notNull(),
   created_at: timestamp("created_at").defaultNow().notNull(),
   updated_at: timestamp("updated_at").defaultNow().notNull(),
 });
